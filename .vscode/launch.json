@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "lome (Edge)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "edge",
+      "args": ["--no-web-resources-cdn"]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lome/utils/app_fonts.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -80,11 +81,27 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               
-              const SizedBox(height: 48),
-              
-              // 4个核心功能入口
+              const Spacer(),
+
+              // 装饰元素
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.circle_outlined, size: 8, color: Colors.grey.shade300),
+                    const SizedBox(width: 12),
+                    Icon(Icons.favorite, size: 14, color: Colors.pink.shade200),
+                    const SizedBox(width: 12),
+                    Icon(Icons.circle_outlined, size: 8, color: Colors.grey.shade300),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // 4个核心功能入口（底部）
               Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildFeatureItem(
                     icon: Icons.calendar_today,
@@ -112,22 +129,6 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-              
-              const SizedBox(height: 60),
-              
-              // 装饰元素
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.circle_outlined, size: 8, color: Colors.grey.shade300),
-                    const SizedBox(width: 12),
-                    Icon(Icons.favorite, size: 14, color: Colors.pink.shade200),
-                    const SizedBox(width: 12),
-                    Icon(Icons.circle_outlined, size: 8, color: Colors.grey.shade300),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
@@ -141,6 +142,8 @@ class HomePage extends StatelessWidget {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final mutedColor = AppFonts.muted(color);
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -149,22 +152,23 @@ class HomePage extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: mutedColor.withOpacity(0.18),
               shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white,
+                width: 2,
+              ),
             ),
             child: Icon(
               icon,
               size: 32,
-              color: color,
+              color: mutedColor,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             label,
-            style: GoogleFonts.caveat(
-              fontSize: 16,
-              color: const Color(0xFF5D4E3C),
-            ),
+            style: AppFonts.featureLabel(),
           ),
         ],
       ),
