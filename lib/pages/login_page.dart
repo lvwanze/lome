@@ -1,4 +1,3 @@
-import 'package:lome/services/cloudbase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lome/services/auth_service.dart';
@@ -46,17 +45,16 @@ class _LoginPageState extends State<LoginPage> {
     });
     _startCountdown();
 
-    final result = await CloudBaseService().callFunction('sendSms', {
-      'phone': _phoneController.text,
-    });
-
-    if (result['success'] == true) {
+    try {
+      await AuthService().sendCode(_phoneController.text);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('💌 验证码已发送，快去查看')),
       );
-    } else {
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('发送失败：${result['message']}')),
+        SnackBar(content: Text('发送失败：$e')),
       );
       setState(() {
         _codeSent = false;
@@ -65,46 +63,42 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
- void _login() async {
-  if (_phoneController.text.length != 11) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('📝 写对手机号哦')),
-    );
-    return;
-  }
-  
-  if (_codeController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🔐 输入验证码吧')),
-    );
-    return;
-  }
-  
-  // 调用 AuthService 登录
-  final result = await AuthService().login(
-    _phoneController.text,
-    _codeController.text,
-  );
-  
-  print('登录结果: $result'); 
+  void _login() async {
+    if (_phoneController.text.length != 11) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('📝 写对手机号哦')),
+      );
+      return;
+    }
 
-  if (result['success'] == true) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('✨ 欢迎回来，${_phoneController.text} ✨')),
-    );
-    
-    // ⭐ 关键：跳转到主页
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomePage()),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('登录失败：${result['message']}')),
-    );
+    if (_codeController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('🔐 输入验证码吧')),
+      );
+      return;
+    }
+
+    try {
+      final user = await AuthService().login(
+        _phoneController.text,
+        _codeController.text,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('✨ 欢迎回来，${user.nickname} ✨')),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('登录失败：$e')),
+      );
+    }
   }
-}
- 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -123,7 +117,7 @@ class _LoginPageState extends State<LoginPage> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white.withValues(alpha: 0.6),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
@@ -168,6 +162,7 @@ class _LoginPageState extends State<LoginPage> {
                   icon: Icons.phone_outlined,
                 ),
                 const SizedBox(height: 24),
+                // 删掉了重复的 SizedBox(height: 24)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -187,7 +182,10 @@ class _LoginPageState extends State<LoginPage> {
                           backgroundColor: Colors.transparent,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            side: BorderSide(color: Colors.pink.shade200, width: 1.5),
+                            side: BorderSide(
+                              color: Colors.pink.shade200,
+                              width: 1.5,
+                            ),
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
@@ -231,11 +229,23 @@ class _LoginPageState extends State<LoginPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.circle_outlined, size: 8, color: Colors.grey.shade300),
+                      Icon(
+                        Icons.circle_outlined,
+                        size: 8,
+                        color: Colors.grey.shade300,
+                      ),
                       const SizedBox(width: 8),
-                      Icon(Icons.favorite, size: 12, color: Colors.pink.shade100),
+                      Icon(
+                        Icons.favorite,
+                        size: 12,
+                        color: Colors.pink.shade100,
+                      ),
                       const SizedBox(width: 8),
-                      Icon(Icons.circle_outlined, size: 8, color: Colors.grey.shade300),
+                      Icon(
+                        Icons.circle_outlined,
+                        size: 8,
+                        color: Colors.grey.shade300,
+                      ),
                     ],
                   ),
                 ),
@@ -282,7 +292,7 @@ class _LoginPageState extends State<LoginPage> {
                     fontSize: 18,
                     color: const Color(0xFF5D4E3C),
                   ),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     border: OutlineInputBorder(borderSide: BorderSide.none),
                     hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
                     isDense: true,
