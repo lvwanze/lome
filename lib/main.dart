@@ -3,7 +3,9 @@ import 'package:lome/services/auth_service.dart';
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthService.init();
   runApp(const LomeApp());
 }
 
@@ -39,7 +41,7 @@ class _SplashCheckState extends State<SplashCheck> {
   }
 
   Future<void> _checkLogin() async {
-    final isLoggedIn = await AuthService().isLoggedIn();
+    final isLoggedIn = AuthService().isLoggedIn();
     
     // 延迟1秒，显示启动画面
     await Future.delayed(const Duration(seconds: 1));
