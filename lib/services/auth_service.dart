@@ -1,5 +1,4 @@
-// 本文件在「假数据阶段」用 print 输出调试日志（如 `【假数据】...`），
-// 供任务五验证时在控制台核对，故整文件忽略 avoid_print 提示。
+// 本文件已切换到「真实接口模式」
 // ignore_for_file: avoid_print
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -10,9 +9,8 @@ import '../utils/app_constants.dart';
 
 /// 认证服务 - 单例模式
 ///
-/// 对外提供 8 个方法（详见文件底部），李卓与组长直接调用即可。
-/// 当前为【假数据阶段】：每个方法直接返回模拟数据，UI 可完整跑通流程。
-/// 后端部署后，按任务六将「假数据」段注释掉、把「真实接口」段取消注释即可。
+/// 对外提供 8 个方法，供 UI 层直接调用。
+/// 当前为【真实接口模式】：所有方法直接调用后端 HTTP 接口。
 class AuthService {
   // ============ 单例 ============
   static final AuthService _instance = AuthService._internal();
@@ -49,9 +47,8 @@ class AuthService {
     }
     return headers;
   }
-  /// 统一请求方法（真实接口使用）
-  // 假数据阶段仅被注释中的真实接口代码引用，故先忽略 unused 警告（任务六启用后移除此行）
-  // ignore: unused_element
+
+  /// 统一请求方法
   Future<ApiResponse<T>> _request<T>(
     String method,
     String endpoint, {
@@ -92,6 +89,7 @@ class AuthService {
       rethrow;
     }
   }
+
   // ============================================================
   // ============ 以下是8个对外公开的方法 ============
   // ============================================================
@@ -100,13 +98,6 @@ class AuthService {
   /// 用途：李卓在登录页点击"获取验证码"时调用
   /// 接口：POST /api/v1/auth/code
   Future<void> sendCode(String phone) async {
-    // ========== 假数据阶段 ==========
-    print('【假数据】向 $phone 发送验证码成功');
-    await Future.delayed(const Duration(seconds: 1));
-    return;
-    // ========== 假数据结束 ==========
-
-    /* ========== 真实接口（等后端部署后取消注释） ==========
     final response = await _request<dynamic>(
       'POST',
       AppConstants.sendCodeEndpoint,
@@ -117,7 +108,6 @@ class AuthService {
     if (!response.isSuccess) {
       throw Exception(_getErrorMessage(response.code, response.message));
     }
-    ========== 真实接口结束 ========== */
   }
 
   // ---------- 4.2 登录 ----------
@@ -125,23 +115,6 @@ class AuthService {
   /// 接口：POST /api/v1/auth/login
   /// 返回：User对象（登录成功后自动保存Token和User）
   Future<User> login(String phone, String code) async {
-    // ========== 假数据阶段 ==========
-    print('【假数据】手机号 $phone 登录成功');
-    await Future.delayed(const Duration(seconds: 1));
-    final fakeUser = User(
-      userId: 'fake_user_001',
-      phone: phone,
-      nickname: '用户1008',
-      isBound: false,
-      partnerId: null,
-      partnerNickname: null,
-    );
-    await _saveToken('fake_token_123456');
-    await _saveUser(fakeUser);
-    return fakeUser;
-    // ========== 假数据结束 ==========
-
-    /* ========== 真实接口（等后端部署后取消注释） ==========
     final response = await _request<Map<String, dynamic>>(
       'POST',
       AppConstants.loginEndpoint,
@@ -164,25 +137,12 @@ class AuthService {
     );
     await _saveUser(user);
     return user;
-    ========== 真实接口结束 ========== */
   }
+
   // ---------- 4.3 获取用户信息 ----------
   /// 用途：组长进入首页、下拉刷新时调用
   /// 接口：GET /api/v1/user/me
   Future<User> getUserInfo() async {
-    // ========== 假数据阶段 ==========
-    print('【假数据】获取用户信息成功');
-    await Future.delayed(const Duration(milliseconds: 500));
-    return await getCurrentUser() ??
-        User(
-          userId: 'fake_user_001',
-          phone: '13800138000',
-          nickname: '用户1008',
-          isBound: false,
-        );
-    // ========== 假数据结束 ==========
-
-    /* ========== 真实接口（等后端部署后取消注释） ==========
     final response = await _request<Map<String, dynamic>>(
       'GET',
       AppConstants.userInfoEndpoint,
@@ -203,7 +163,6 @@ class AuthService {
     );
     await _saveUser(user);
     return user;
-    ========== 真实接口结束 ========== */
   }
 
   // ---------- 4.4 生成绑定码 ----------
@@ -211,13 +170,6 @@ class AuthService {
   /// 接口：POST /api/v1/bind/generate
   /// 返回：绑定码
   Future<String> generateBindCode() async {
-    // ========== 假数据阶段 ==========
-    print('【假数据】生成绑定码成功');
-    await Future.delayed(const Duration(seconds: 1));
-    return 'LOVE-ABCD-1234';
-    // ========== 假数据结束 ==========
-
-    /* ========== 真实接口（等后端部署后取消注释） ==========
     final response = await _request<Map<String, dynamic>>(
       'POST',
       AppConstants.generateBindCodeEndpoint,
@@ -228,32 +180,13 @@ class AuthService {
       throw Exception(_getErrorMessage(response.code, response.message));
     }
     return response.data!['bindCode'] as String;
-    ========== 真实接口结束 ========== */
   }
+
   // ---------- 4.5 使用绑定码 ----------
   /// 用途：组长点击"确认绑定"时调用
   /// 接口：POST /api/v1/bind/use
   /// 返回：伴侣信息（partnerId, partnerNickname），同时自动刷新本地用户信息
   Future<Map<String, String>> useBindCode(String code) async {
-    // ========== 假数据阶段 ==========
-    print('【假数据】使用绑定码 $code 成功');
-    await Future.delayed(const Duration(seconds: 1));
-    final currentUser = await getCurrentUser();
-    if (currentUser != null) {
-      final updatedUser = User(
-        userId: currentUser.userId,
-        phone: currentUser.phone,
-        nickname: currentUser.nickname,
-        isBound: true,
-        partnerId: 'partner_001',
-        partnerNickname: '我的伴侣',
-      );
-      await _saveUser(updatedUser);
-    }
-    return {'partnerId': 'partner_001', 'partnerNickname': '我的伴侣'};
-    // ========== 假数据结束 ==========
-
-    /* ========== 真实接口（等后端部署后取消注释） ==========
     final response = await _request<Map<String, dynamic>>(
       'POST',
       AppConstants.useBindCodeEndpoint,
@@ -270,32 +203,12 @@ class AuthService {
       'partnerId': data['partnerId'] as String,
       'partnerNickname': data['partnerNickname'] as String,
     };
-    ========== 真实接口结束 ========== */
   }
 
   // ---------- 4.6 解除绑定 ----------
   /// 用途：组长点击"解除绑定"时调用
   /// 接口：POST /api/v1/bind/unbind
   Future<void> unbind() async {
-    // ========== 假数据阶段 ==========
-    print('【假数据】解除绑定成功');
-    await Future.delayed(const Duration(seconds: 1));
-    final currentUser = await getCurrentUser();
-    if (currentUser != null) {
-      final updatedUser = User(
-        userId: currentUser.userId,
-        phone: currentUser.phone,
-        nickname: currentUser.nickname,
-        isBound: false,
-        partnerId: null,
-        partnerNickname: null,
-      );
-      await _saveUser(updatedUser);
-    }
-    return;
-    // ========== 假数据结束 ==========
-
-    /* ========== 真实接口（等后端部署后取消注释） ==========
     final response = await _request<dynamic>(
       'POST',
       AppConstants.unbindEndpoint,
@@ -306,8 +219,8 @@ class AuthService {
       throw Exception(_getErrorMessage(response.code, response.message));
     }
     await getUserInfo(); // 解绑成功后刷新本地用户信息
-    ========== 真实接口结束 ========== */
   }
+
   // ---------- 4.7 退出登录 ----------
   /// 用途：李卓或组长点击退出登录时调用
   Future<void> logout() async {
@@ -336,8 +249,6 @@ class AuthService {
   }
 
   /// 错误码翻译（任务三：错误码映射表）
-  // 假数据阶段仅被注释中的真实接口代码引用，故先忽略 unused 警告（任务六启用后移除此行）
-  // ignore: unused_element
   String _getErrorMessage(int code, String defaultMessage) {
     switch (code) {
       // 100x: 验证码相关

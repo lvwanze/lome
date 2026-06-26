@@ -4,12 +4,11 @@ class AppConstants {
   AppConstants._();
 
   // ========== Base URL ==========
-  // 【重要】先用占位符，等后端部署后替换成真实地址（任务六 Step 1）
-  static const String baseUrl = 'https://api.lome-app.com';
+  // 【真实接口】后端部署后的 HTTP 网关地址
+  static const String baseUrl =
+      'https://love-app1-0g8yva6l11e713ef-1418513210.ap-shanghai.app.tcloudbase.com';
 
   // ========== 接口路径 ==========
-  // 注意：接口文档中路径格式不统一（有的带 /api/v1，有的不带），
-  // 这里按文档要求全部统一为 /api/v1/xxx。
   static const String sendCodeEndpoint = '/api/v1/auth/code'; // 接口1 发送验证码
   static const String loginEndpoint = '/api/v1/auth/login'; // 接口2 登录
   static const String userInfoEndpoint = '/api/v1/user/me'; // 接口3 获取我的信息

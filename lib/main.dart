@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:lome/services/auth_service.dart';
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
+// import 'pages/bind_page.dart';  // TODO: 等 bind_page.dart 创建后启用
 
 void main() async {
+  // 异步初始化必备
   WidgetsFlutterBinding.ensureInitialized();
   await AuthService.init();
   runApp(const LomeApp());
@@ -20,12 +22,21 @@ class LomeApp extends StatelessWidget {
         primarySwatch: Colors.pink,
         useMaterial3: true,
       ),
-      home: const SplashCheck(),
+      // 初始路由：启动闪屏页
+      initialRoute: '/splash',
+      // 统一路由注册表
+      routes: {
+        '/splash': (context) => const SplashCheck(),
+        '/login': (context) => const LoginPage(),
+        '/home': (context) => const HomePage(),
+        // '/bind': (context) => const BindPage(),  // TODO: 等 bind_page.dart 创建后启用
+      },
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
+// 启动闪屏 + 登录状态校验
 class SplashCheck extends StatefulWidget {
   const SplashCheck({super.key});
 
@@ -42,22 +53,16 @@ class _SplashCheckState extends State<SplashCheck> {
 
   Future<void> _checkLogin() async {
     final isLoggedIn = AuthService().isLoggedIn();
-    
-    // 延迟1秒，显示启动画面
+    // 闪屏停留1秒
     await Future.delayed(const Duration(seconds: 1));
-    
-    if (mounted) {
-      if (isLoggedIn) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-        );
-      }
+
+    if (!mounted) return;
+
+    // 使用命名路由跳转，替换当前页面
+    if (isLoggedIn) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      Navigator.pushReplacementNamed(context, '/login');
     }
   }
 
