@@ -1,0 +1,1175 @@
+卷 Windows 的文件夹 PATH 列表
+卷序列号为 000000DF 4EEB:B872
+C:.
+│  .env
+│  .flutter-plugins
+│  .flutter-plugins-dependencies
+│  .gitignore
+│  .metadata
+│  analysis_options.yaml
+│  list.txt
+│  lome.iml
+│  pubspec.lock
+│  pubspec.yaml
+│  README.md
+│  
+├─.dart_tool
+│  │  package_config.json
+│  │  package_config_subset
+│  │  version
+│  │  
+│  ├─chrome-device
+│  │  └─Default
+│  │      │  Account Web Data
+│  │      │  Account Web Data-journal
+│  │      │  Affiliation Database
+│  │      │  Affiliation Database-journal
+│  │      │  arbitration_service_config.json
+│  │      │  BookmarkMergedSurfaceOrdering
+│  │      │  Bookmarks
+│  │      │  Bookmarks.bak
+│  │      │  BrowsingTopicsSiteData
+│  │      │  BrowsingTopicsSiteData-journal
+│  │      │  BrowsingTopicsState
+│  │      │  DashTrackerDatabase
+│  │      │  DashTrackerDatabase-journal
+│  │      │  DIPS
+│  │      │  DIPS-wal
+│  │      │  ExtensionActivityComp
+│  │      │  ExtensionActivityEdge
+│  │      │  ExtensionActivityEdge-journal
+│  │      │  Favicons
+│  │      │  Favicons-journal
+│  │      │  favorites_diagnostic.log
+│  │      │  heavy_ad_intervention_opt_out.db
+│  │      │  heavy_ad_intervention_opt_out.db-journal
+│  │      │  History
+│  │      │  History-journal
+│  │      │  HubApps
+│  │      │  HubApps Icons
+│  │      │  HubApps Icons-journal
+│  │      │  load_statistics.db
+│  │      │  load_statistics.db-shm
+│  │      │  load_statistics.db-wal
+│  │      │  LOCK
+│  │      │  LOG
+│  │      │  LOG.old
+│  │      │  Login Data
+│  │      │  Login Data For Account
+│  │      │  Login Data For Account-journal
+│  │      │  Login Data-journal
+│  │      │  Network Action Predictor
+│  │      │  Network Action Predictor-journal
+│  │      │  Preferences
+│  │      │  PreferredApps
+│  │      │  README
+│  │      │  Secure Preferences
+│  │      │  ServerCertificate
+│  │      │  ServerCertificate-journal
+│  │      │  SharedStorage
+│  │      │  Shortcuts
+│  │      │  Shortcuts-journal
+│  │      │  SiteList.xml
+│  │      │  Top Sites
+│  │      │  Top Sites-journal
+│  │      │  trusted_vault.pb
+│  │      │  Vpn Tokens
+│  │      │  Vpn Tokens-journal
+│  │      │  Web Data
+│  │      │  Web Data-journal
+│  │      │  
+│  │      ├─Asset Store
+│  │      │  └─assets.db
+│  │      │          000003.ldb
+│  │      │          000003.log
+│  │      │          000004.log
+│  │      │          CURRENT
+│  │      │          LOCK
+│  │      │          LOG
+│  │      │          LOG.old
+│  │      │          MANIFEST-000001
+│  │      │          
+│  │      ├─AutofillStrikeDatabase
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      
+│  │      ├─blob_storage
+│  │      │  ├─053e7feb-e13a-4165-9161-43114bc285fa
+│  │      │  ├─0694e257-4970-4941-81b1-3c61d1d5df0c
+│  │      │  ├─07c527da-7924-4733-8aa5-cee9530ab5b1
+│  │      │  ├─0a2f8a33-b8db-4bf2-9fa6-d21be8fbf5d3
+│  │      │  ├─0f0e6fdc-2cab-4708-a5ac-3e26a3f47451
+│  │      │  ├─15b94aeb-05e0-4438-b497-7d0dd94cbe41
+│  │      │  ├─1dc79b34-493c-4ad3-99b5-ef706caa7365
+│  │      │  ├─20aaf692-0554-48f5-93e3-35b0aa44277a
+│  │      │  ├─2382c0b2-7e91-4e55-961a-e11243be1265
+│  │      │  ├─2426a4bd-e792-4467-9952-29bd870ceb76
+│  │      │  ├─24c2a669-8f2c-4c46-ad45-6977afdaa0a7
+│  │      │  ├─261fca9d-2a7a-4614-91a8-5adaaaef1675
+│  │      │  ├─2bf4b22a-e5f1-4cd9-997f-5fc6f5923b15
+│  │      │  ├─40c555d3-a60d-423c-9c8b-d46817719aaa
+│  │      │  ├─4bcee89f-ba5e-4686-bd6e-d89170fa24b3
+│  │      │  ├─58fd6edf-736a-47d5-b198-e5ec4a353160
+│  │      │  ├─5f582b70-ab1f-41b6-b9c1-26caa0e37538
+│  │      │  ├─69fbb802-098b-46ed-a08d-a3806f85c0e7
+│  │      │  ├─6d530e42-68da-4e27-8156-cfdf9113933c
+│  │      │  ├─737d0d37-18ef-49ff-b378-6799e5db406b
+│  │      │  ├─744fd6f7-51b4-46d9-9598-5233bc99cfe1
+│  │      │  ├─79c266bf-f3e7-4e1e-a8e7-8e51b1cb4934
+│  │      │  ├─7c0703ff-56fc-4774-8938-84bbb3f198cc
+│  │      │  ├─8a6e107a-9dd6-40af-8202-09460038378a
+│  │      │  ├─94fc0d06-6854-43b6-a91d-f206f5a9c0db
+│  │      │  ├─9c54719e-2c65-42af-b205-26c22976b1af
+│  │      │  ├─b533b94f-2656-493d-86dc-a8af4379e679
+│  │      │  ├─c1bb90c1-9ee2-4e76-8287-55dc3f3f674a
+│  │      │  ├─c69463d5-5561-4ef1-aab6-cff1eb9c3dd1
+│  │      │  ├─c6edede9-ad95-4a0a-b6aa-a8e1a553b55a
+│  │      │  ├─c924451f-0bd2-4741-aebb-f7f9e9721af4
+│  │      │  ├─d34ffd89-5202-40c3-bb03-35c82e406751
+│  │      │  ├─d741118e-52e0-441a-ae71-3d5d356b7721
+│  │      │  ├─db6446b5-ad9f-47f2-9a73-cad44c3911b2
+│  │      │  ├─df06f58a-c311-4d48-853e-42a9baf5daca
+│  │      │  ├─e41b4b67-2c9e-4314-9d3d-0c6dc25f1109
+│  │      │  └─fb70c035-3ceb-4c4c-a750-25a2e97e98ee
+│  │      ├─BudgetDatabase
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      
+│  │      ├─chrome_cart_db
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      
+│  │      ├─ClientCertificates
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      
+│  │      ├─Collections
+│  │      │      collectionsSQLite
+│  │      │      collectionsSQLite-journal
+│  │      │      
+│  │      ├─commerce_subscription_db
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      
+│  │      ├─discounts_db
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      
+│  │      ├─discount_infos_db
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      
+│  │      ├─Download Service
+│  │      │  ├─EntryDB
+│  │      │  │      LOCK
+│  │      │  │      LOG
+│  │      │  │      LOG.old
+│  │      │  │      
+│  │      │  └─Files
+│  │      ├─DualEngine
+│  │      │      SiteList-Consumer.json
+│  │      │      
+│  │      ├─EdgeCoupons
+│  │      │  └─coupons_data.db
+│  │      │          000003.log
+│  │      │          CURRENT
+│  │      │          LOCK
+│  │      │          LOG
+│  │      │          LOG.old
+│  │      │          MANIFEST-000001
+│  │      │          
+│  │      ├─EdgeEDrop
+│  │      │      EdgeEDropSQLite.db
+│  │      │      EdgeEDropSQLite.db-journal
+│  │      │      
+│  │      ├─EdgeHubAppUsage
+│  │      │      EdgeHubAppUsageSQLite.db
+│  │      │      EdgeHubAppUsageSQLite.db-journal
+│  │      │      
+│  │      ├─EdgePushStorageWithConnectTokenAndKey
+│  │      │      000003.log
+│  │      │      CURRENT
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      MANIFEST-000001
+│  │      │      
+│  │      ├─EdgeWallet
+│  │      ├─EntityExtraction
+│  │      │  │  domains_config.json
+│  │      │  │  
+│  │      │  └─EntityExtractionAssetStore.db
+│  │      │          000003.log
+│  │      │          CURRENT
+│  │      │          LOCK
+│  │      │          LOG
+│  │      │          LOG.old
+│  │      │          MANIFEST-000001
+│  │      │          
+│  │      ├─Extension Rules
+│  │      │      000003.log
+│  │      │      CURRENT
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      MANIFEST-000001
+│  │      │      
+│  │      ├─Extension Scripts
+│  │      │      000003.log
+│  │      │      CURRENT
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      MANIFEST-000001
+│  │      │      
+│  │      ├─Extension State
+│  │      │      000003.log
+│  │      │      CURRENT
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      MANIFEST-000001
+│  │      │      
+│  │      ├─Feature Engagement Tracker
+│  │      │  ├─AvailabilityDB
+│  │      │  │      LOCK
+│  │      │  │      LOG
+│  │      │  │      LOG.old
+│  │      │  │      
+│  │      │  └─EventDB
+│  │      │          LOCK
+│  │      │          LOG
+│  │      │          LOG.old
+│  │      │          
+│  │      ├─GCM Store
+│  │      │  │  000003.log
+│  │      │  │  CURRENT
+│  │      │  │  LOCK
+│  │      │  │  LOG
+│  │      │  │  LOG.old
+│  │      │  │  MANIFEST-000001
+│  │      │  │  
+│  │      │  └─Encryption
+│  │      │          000003.log
+│  │      │          CURRENT
+│  │      │          LOCK
+│  │      │          LOG
+│  │      │          LOG.old
+│  │      │          MANIFEST-000001
+│  │      │          
+│  │      ├─JumpListIconsRecentClosed
+│  │      │      feaad2ba-d447-4d2e-8922-e5d44521d77e.tmp
+│  │      │      
+│  │      ├─JumpListIconsRecentWorkspacesV2
+│  │      ├─Local Extension Settings
+│  │      │  └─jdiccldimpdaibmpdkjnbmckianbfold
+│  │      │          000003.log
+│  │      │          CURRENT
+│  │      │          LOCK
+│  │      │          LOG
+│  │      │          LOG.old
+│  │      │          MANIFEST-000001
+│  │      │          
+│  │      ├─Local Storage
+│  │      │  └─leveldb
+│  │      │          000003.log
+│  │      │          CURRENT
+│  │      │          LOCK
+│  │      │          LOG
+│  │      │          LOG.old
+│  │      │          MANIFEST-000001
+│  │      │          
+│  │      ├─Network
+│  │      │      Cookies
+│  │      │      Cookies-journal
+│  │      │      Device Bound Sessions
+│  │      │      Device Bound Sessions-journal
+│  │      │      Network Persistent State
+│  │      │      NetworkDataMigrated
+│  │      │      Reporting and NEL
+│  │      │      Reporting and NEL-journal
+│  │      │      SCT Auditing Pending Reports
+│  │      │      Sdch Dictionaries
+│  │      │      TransportSecurity
+│  │      │      Trust Tokens
+│  │      │      Trust Tokens-journal
+│  │      │      
+│  │      ├─Nurturing
+│  │      │      campaign_history
+│  │      │      campaign_history-journal
+│  │      │      
+│  │      ├─optimization_guide_hint_cache_store
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      
+│  │      ├─parcel_tracking_db
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      
+│  │      ├─Password_Diagnostics
+│  │      │      PMLog_13423573927970836
+│  │      │      
+│  │      ├─PersistentOriginTrials
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      
+│  │      ├─Safe Browsing Network
+│  │      │      NetworkDataMigrated
+│  │      │      Safe Browsing Cookies
+│  │      │      Safe Browsing Cookies-journal
+│  │      │      
+│  │      ├─Segmentation Platform
+│  │      │  ├─SegmentInfoDB
+│  │      │  │      LOCK
+│  │      │  │      LOG
+│  │      │  │      LOG.old
+│  │      │  │      
+│  │      │  ├─SignalDB
+│  │      │  │      LOCK
+│  │      │  │      LOG
+│  │      │  │      LOG.old
+│  │      │  │      
+│  │      │  └─SignalStorageConfigDB
+│  │      │          LOCK
+│  │      │          LOG
+│  │      │          LOG.old
+│  │      │          
+│  │      ├─Service Worker
+│  │      │  ├─Database
+│  │      │  │      000003.log
+│  │      │  │      CURRENT
+│  │      │  │      LOCK
+│  │      │  │      LOG
+│  │      │  │      LOG.old
+│  │      │  │      MANIFEST-000001
+│  │      │  │      
+│  │      │  └─ScriptCache
+│  │      │      │  013888a1cda32b90_0
+│  │      │      │  08b99d499107ba17_0
+│  │      │      │  0ae129c33e7a30bd_0
+│  │      │      │  0d3086d7cda635d4_0
+│  │      │      │  23469ac906fcc612_0
+│  │      │      │  2687cdb408524ecb_0
+│  │      │      │  297ecea5cebb5dfe_0
+│  │      │      │  2a0afd649b00527b_0
+│  │      │      │  2beb0213504d07fc_0
+│  │      │      │  2cc80dabc69f58b6_0
+│  │      │      │  3ef2ebed6c12e1f6_0
+│  │      │      │  45c2f2fcb9072b47_0
+│  │      │      │  4cb013792b196a35_0
+│  │      │      │  653e56b4b6556a9e_0
+│  │      │      │  67a473248953641b_0
+│  │      │      │  6c038e3570d6abf1_0
+│  │      │      │  6f8ac775dbbd7415_0
+│  │      │      │  6fc459ba53cb570a_0
+│  │      │      │  7b4fd8111178d5b1_0
+│  │      │      │  83efbe48d0097388_0
+│  │      │      │  8a729281c4672a97_0
+│  │      │      │  91baa182c7a11977_0
+│  │      │      │  ad0c92dfa52e69b6_0
+│  │      │      │  afe1e5264eea33bc_0
+│  │      │      │  b2efa64ecb36f8f1_0
+│  │      │      │  b3bd0d67f800d222_0
+│  │      │      │  b6c28cea6ed9dfc1_0
+│  │      │      │  ba23d8ecda68de77_0
+│  │      │      │  ce2a2172c04b134d_0
+│  │      │      │  d0757ff92c7cde0a_0
+│  │      │      │  d10f805e771d7acb_0
+│  │      │      │  e0d37c7e54672663_0
+│  │      │      │  f13a76bbf6c7f0b3_0
+│  │      │      │  f1cdccba37924bda_0
+│  │      │      │  f1cdccba37924bda_1
+│  │      │      │  f3ab1e1292e135fa_0
+│  │      │      │  f76ccbbbd72a0391_0
+│  │      │      │  fa813c9ad67834ac_0
+│  │      │      │  fb1f328d70d91607_0
+│  │      │      │  index
+│  │      │      │  
+│  │      │      └─index-dir
+│  │      │              63dc409f-3f1a-4c0b-9ff1-0ea92c48be12.tmp
+│  │      │              temp-index
+│  │      │              the-real-index
+│  │      │              
+│  │      ├─Session Storage
+│  │      │      000003.log
+│  │      │      CURRENT
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      MANIFEST-000001
+│  │      │      
+│  │      ├─Sessions
+│  │      │      Session_13423573443417364
+│  │      │      Session_13423573747460599
+│  │      │      Session_13423573921824177
+│  │      │      Session_13424177107079904
+│  │      │      Session_13424177233295424
+│  │      │      Session_13424177320364147
+│  │      │      Session_13424178186702965
+│  │      │      Session_13424183442327654
+│  │      │      Session_13424184122898786
+│  │      │      Session_13424184898725089
+│  │      │      Session_13424185105495800
+│  │      │      Session_13424185987484383
+│  │      │      Session_13424186235178671
+│  │      │      Session_13424186353463374
+│  │      │      Session_13424186580536863
+│  │      │      Session_13424187380777780
+│  │      │      Session_13424187623521992
+│  │      │      Session_13424187734742810
+│  │      │      Session_13424187848224514
+│  │      │      Session_13424187916998032
+│  │      │      Session_13424188186027829
+│  │      │      Session_13424189904366363
+│  │      │      Session_13424275919013521
+│  │      │      Session_13424276871967094
+│  │      │      Session_13424277179866904
+│  │      │      Session_13424277701711901
+│  │      │      Session_13424277972246605
+│  │      │      Session_13424278397136327
+│  │      │      Session_13424278565429670
+│  │      │      Session_13424278962444339
+│  │      │      Session_13424279345231304
+│  │      │      Session_13424501332633038
+│  │      │      Session_13424501462237373
+│  │      │      Session_13424501718875077
+│  │      │      Session_13424501889175055
+│  │      │      Session_13424501939036693
+│  │      │      Session_13424502046262823
+│  │      │      Tabs_13423573561610992
+│  │      │      Tabs_13423573747708497
+│  │      │      Tabs_13423573922025070
+│  │      │      Tabs_13424177107279244
+│  │      │      Tabs_13424177233479707
+│  │      │      Tabs_13424177320587870
+│  │      │      Tabs_13424178186983401
+│  │      │      Tabs_13424183442513589
+│  │      │      Tabs_13424184123056371
+│  │      │      Tabs_13424184898896071
+│  │      │      Tabs_13424185105635812
+│  │      │      Tabs_13424185987664033
+│  │      │      Tabs_13424186235326451
+│  │      │      Tabs_13424186353658077
+│  │      │      Tabs_13424186580678611
+│  │      │      Tabs_13424187380973290
+│  │      │      Tabs_13424187623656119
+│  │      │      Tabs_13424187734916015
+│  │      │      Tabs_13424187848365320
+│  │      │      Tabs_13424187917187531
+│  │      │      Tabs_13424188186169125
+│  │      │      Tabs_13424189904578450
+│  │      │      Tabs_13424275919223876
+│  │      │      Tabs_13424276872180505
+│  │      │      Tabs_13424277180001268
+│  │      │      Tabs_13424277701937766
+│  │      │      Tabs_13424277972433142
+│  │      │      Tabs_13424278397391406
+│  │      │      Tabs_13424278565639776
+│  │      │      Tabs_13424278962609458
+│  │      │      Tabs_13424279345486261
+│  │      │      Tabs_13424501332770091
+│  │      │      Tabs_13424501462419674
+│  │      │      Tabs_13424501719031218
+│  │      │      Tabs_13424501889372918
+│  │      │      Tabs_13424501939188468
+│  │      │      Tabs_13424502046430326
+│  │      │      
+│  │      ├─Shared Dictionary
+│  │      │  │  db
+│  │      │  │  db-journal
+│  │      │  │  
+│  │      │  └─cache
+│  │      │      │  index
+│  │      │      │  
+│  │      │      └─index-dir
+│  │      │              the-real-index
+│  │      │              
+│  │      ├─shared_proto_db
+│  │      │  │  000003.log
+│  │      │  │  CURRENT
+│  │      │  │  LOCK
+│  │      │  │  LOG
+│  │      │  │  LOG.old
+│  │      │  │  MANIFEST-000001
+│  │      │  │  
+│  │      │  └─metadata
+│  │      │          000003.log
+│  │      │          CURRENT
+│  │      │          LOCK
+│  │      │          LOG
+│  │      │          LOG.old
+│  │      │          MANIFEST-000001
+│  │      │          
+│  │      ├─Site Characteristics Database
+│  │      │      000003.log
+│  │      │      CURRENT
+│  │      │      LOCK
+│  │      │      LOG
+│  │      │      LOG.old
+│  │      │      MANIFEST-000001
+│  │      │      
+│  │      ├─Storage
+│  │      │  └─ext
+│  │      │      └─ihmafllikibpmigkcoadcmckbfhibefp
+│  │      │          └─def
+│  │      │              │  SharedStorage
+│  │      │              │  
+│  │      │              ├─Cache
+│  │      │              │  ├─Cache_Data
+│  │      │              │  └─No_Vary_Search
+│  │      │              ├─Code Cache
+│  │      │              │  ├─js
+│  │      │              │  │  │  6f3a0dc5e6916f1e_0
+│  │      │              │  │  │  index
+│  │      │              │  │  │  
+│  │      │              │  │  └─index-dir
+│  │      │              │  │          the-real-index
+│  │      │              │  │          
+│  │      │              │  └─wasm
+│  │      │              │      │  index
+│  │      │              │      │  
+│  │      │              │      └─index-dir
+│  │      │              │              the-real-index
+│  │      │              │              
+│  │      │              ├─DawnGraphiteCache
+│  │      │              │      data_0
+│  │      │              │      data_1
+│  │      │              │      data_2
+│  │      │              │      data_3
+│  │      │              │      index
+│  │      │              │      
+│  │      │              ├─DawnWebGPUCache
+│  │      │              │      data_0
+│  │      │              │      data_1
+│  │      │              │      data_2
+│  │      │              │      data_3
+│  │      │              │      index
+│  │      │              │      
+│  │      │              ├─GPUCache
+│  │      │              │      data_0
+│  │      │              │      data_1
+│  │      │              │      data_2
+│  │      │              │      data_3
+│  │      │              │      index
+│  │      │              │      
+│  │      │              ├─Local Storage
+│  │      │              │  └─leveldb
+│  │      │              │          000003.log
+│  │      │              │          CURRENT
+│  │      │              │          LOCK
+│  │      │              │          LOG
+│  │      │              │          LOG.old
+│  │      │              │          MANIFEST-000001
+│  │      │              │          
+│  │      │              ├─Network
+│  │      │              │      Device Bound Sessions
+│  │      │              │      Device Bound Sessions-journal
+│  │      │              │      Network Persistent State
+│  │      │              │      NetworkDataMigrated
+│  │      │              │      Reporting and NEL
+│  │      │              │      Reporting and NEL-journal
+│  │      │              │      SCT Auditing Pending Reports
+│  │      │              │      Sdch Dictionaries
+│  │      │              │      Trust Tokens
+│  │      │              │      Trust Tokens-journal
+│  │      │              │      
+│  │      │              ├─Session Storage
+│  │      │              │      000003.log
+│  │      │              │      CURRENT
+│  │      │              │      LOCK
+│  │      │              │      LOG
+│  │      │              │      LOG.old
+│  │      │              │      MANIFEST-000001
+│  │      │              │      
+│  │      │              └─Shared Dictionary
+│  │      │                  │  db
+│  │      │                  │  db-journal
+│  │      │                  │  
+│  │      │                  └─cache
+│  │      │                      │  index
+│  │      │                      │  
+│  │      │                      └─index-dir
+│  │      │                              the-real-index
+│  │      │                              
+│  │      ├─Sync Data
+│  │      │  │  Nigori.bin
+│  │      │  │  
+│  │      │  ├─LevelDB
+│  │      │  │      000003.log
+│  │      │  │      000004.log
+│  │      │  │      000005.ldb
+│  │      │  │      000007.log
+│  │      │  │      000008.ldb
+│  │      │  │      000010.log
+│  │      │  │      000011.ldb
+│  │      │  │      CURRENT
+│  │      │  │      LOCK
+│  │      │  │      LOG
+│  │      │  │      LOG.old
+│  │      │  │      MANIFEST-000001
+│  │      │  │      
+│  │      │  └─Logs
+│  │      │          cv_debug.log
+│  │      │          sync_diagnostic.log
+│  │      │          
+│  │      ├─Sync Extension Settings
+│  │      │  └─pnfmbpnlcleaofdmjgobpapjceccjamc
+│  │      │          000003.log
+│  │      │          CURRENT
+│  │      │          LOCK
+│  │      │          LOG
+│  │      │          LOG.old
+│  │      │          MANIFEST-000001
+│  │      │          
+│  │      ├─WebStorage
+│  │      │      QuotaManager
+│  │      │      QuotaManager-journal
+│  │      │      
+│  │      └─Workspaces
+│  │          └─Logs
+│  │                  Workspaces Internals Logs
+│  │                  
+│  ├─dartpad
+│  │      web_plugin_registrant.dart
+│  │      
+│  ├─extension_discovery
+│  │      vs_code.json
+│  │      
+│  └─flutter_build
+├─.idea
+│  │  modules.xml
+│  │  workspace.xml
+│  │  
+│  ├─libraries
+│  │      Dart_SDK.xml
+│  │      KotlinJavaRuntime.xml
+│  │      
+│  └─runConfigurations
+│          main_dart.xml
+│          
+├─.vscode
+│      launch.json
+│      settings.json
+│      
+├─android
+│  │  .gitignore
+│  │  build.gradle.kts
+│  │  gradle.properties
+│  │  gradlew
+│  │  gradlew.bat
+│  │  local.properties
+│  │  lome_android.iml
+│  │  settings.gradle.kts
+│  │  
+│  ├─app
+│  │  │  build.gradle.kts
+│  │  │  
+│  │  └─src
+│  │      ├─debug
+│  │      │      AndroidManifest.xml
+│  │      │      
+│  │      ├─main
+│  │      │  │  AndroidManifest.xml
+│  │      │  │  
+│  │      │  ├─java
+│  │      │  │  └─io
+│  │      │  │      └─flutter
+│  │      │  │          └─plugins
+│  │      │  │                  GeneratedPluginRegistrant.java
+│  │      │  │                  
+│  │      │  ├─kotlin
+│  │      │  │  └─com
+│  │      │  │      └─lome
+│  │      │  │          └─lome
+│  │      │  │                  MainActivity.kt
+│  │      │  │                  
+│  │      │  └─res
+│  │      │      ├─drawable
+│  │      │      │      launch_background.xml
+│  │      │      │      
+│  │      │      ├─drawable-v21
+│  │      │      │      launch_background.xml
+│  │      │      │      
+│  │      │      ├─mipmap-hdpi
+│  │      │      │      ic_launcher.png
+│  │      │      │      
+│  │      │      ├─mipmap-mdpi
+│  │      │      │      ic_launcher.png
+│  │      │      │      
+│  │      │      ├─mipmap-xhdpi
+│  │      │      │      ic_launcher.png
+│  │      │      │      
+│  │      │      ├─mipmap-xxhdpi
+│  │      │      │      ic_launcher.png
+│  │      │      │      
+│  │      │      ├─mipmap-xxxhdpi
+│  │      │      │      ic_launcher.png
+│  │      │      │      
+│  │      │      ├─values
+│  │      │      │      styles.xml
+│  │      │      │      
+│  │      │      └─values-night
+│  │      │              styles.xml
+│  │      │              
+│  │      └─profile
+│  │              AndroidManifest.xml
+│  │              
+│  └─gradle
+│      └─wrapper
+│              gradle-wrapper.jar
+│              gradle-wrapper.properties
+│              
+├─build
+│  │  cache.dill.track.dill
+│  │  
+│  ├─b8b95b1b8b85bfd9931b15d907debc98
+│  │      gen_dart_plugin_registrant.stamp
+│  │      gen_localizations.stamp
+│  │      _composite.stamp
+│  │      
+│  └─flutter_assets
+│      │  AssetManifest.bin
+│      │  AssetManifest.bin.json
+│      │  AssetManifest.json
+│      │  FontManifest.json
+│      │  NOTICES
+│      │  
+│      ├─fonts
+│      │      MaterialIcons-Regular.otf
+│      │      
+│      ├─packages
+│      │  └─cupertino_icons
+│      │      └─assets
+│      │              CupertinoIcons.ttf
+│      │              
+│      └─shaders
+│              ink_sparkle.frag
+│              
+├─cloudbase
+│  └─functions
+│      ├─login
+│      │      index.js
+│      │      
+│      └─sendSms
+│              index.js
+│              
+├─daily-logs
+│      2026-05-11.md
+│      2026-05-18.md
+│      2026-05-25.md
+│      
+├─fonts
+├─ios
+│  │  .gitignore
+│  │  
+│  ├─Flutter
+│  │      AppFrameworkInfo.plist
+│  │      Debug.xcconfig
+│  │      flutter_export_environment.sh
+│  │      Generated.xcconfig
+│  │      Release.xcconfig
+│  │      
+│  ├─Runner
+│  │  │  AppDelegate.swift
+│  │  │  GeneratedPluginRegistrant.h
+│  │  │  GeneratedPluginRegistrant.m
+│  │  │  Info.plist
+│  │  │  Runner-Bridging-Header.h
+│  │  │  
+│  │  ├─Assets.xcassets
+│  │  │  ├─AppIcon.appiconset
+│  │  │  │      Contents.json
+│  │  │  │      Icon-App-1024x1024@1x.png
+│  │  │  │      Icon-App-20x20@1x.png
+│  │  │  │      Icon-App-20x20@2x.png
+│  │  │  │      Icon-App-20x20@3x.png
+│  │  │  │      Icon-App-29x29@1x.png
+│  │  │  │      Icon-App-29x29@2x.png
+│  │  │  │      Icon-App-29x29@3x.png
+│  │  │  │      Icon-App-40x40@1x.png
+│  │  │  │      Icon-App-40x40@2x.png
+│  │  │  │      Icon-App-40x40@3x.png
+│  │  │  │      Icon-App-60x60@2x.png
+│  │  │  │      Icon-App-60x60@3x.png
+│  │  │  │      Icon-App-76x76@1x.png
+│  │  │  │      Icon-App-76x76@2x.png
+│  │  │  │      Icon-App-83.5x83.5@2x.png
+│  │  │  │      
+│  │  │  └─LaunchImage.imageset
+│  │  │          Contents.json
+│  │  │          LaunchImage.png
+│  │  │          LaunchImage@2x.png
+│  │  │          LaunchImage@3x.png
+│  │  │          README.md
+│  │  │          
+│  │  └─Base.lproj
+│  │          LaunchScreen.storyboard
+│  │          Main.storyboard
+│  │          
+│  ├─Runner.xcodeproj
+│  │  │  project.pbxproj
+│  │  │  
+│  │  ├─project.xcworkspace
+│  │  │  │  contents.xcworkspacedata
+│  │  │  │  
+│  │  │  └─xcshareddata
+│  │  │          IDEWorkspaceChecks.plist
+│  │  │          WorkspaceSettings.xcsettings
+│  │  │          
+│  │  └─xcshareddata
+│  │      └─xcschemes
+│  │              Runner.xcscheme
+│  │              
+│  ├─Runner.xcworkspace
+│  │  │  contents.xcworkspacedata
+│  │  │  
+│  │  └─xcshareddata
+│  │          IDEWorkspaceChecks.plist
+│  │          WorkspaceSettings.xcsettings
+│  │          
+│  └─RunnerTests
+│          RunnerTests.swift
+│          
+├─lib
+│  │  main.dart
+│  │  
+│  ├─models
+│  ├─pages
+│  │      home_page.dart
+│  │      login_page.dart
+│  │      
+│  ├─services
+│  │      auth_service.dart
+│  │      cloudbase_service.dart
+│  │      
+│  ├─utils
+│  │      app_fonts.dart
+│  │      
+│  └─widgets
+├─linux
+│  │  .gitignore
+│  │  CMakeLists.txt
+│  │  
+│  ├─flutter
+│  │  │  CMakeLists.txt
+│  │  │  generated_plugins.cmake
+│  │  │  generated_plugin_registrant.cc
+│  │  │  generated_plugin_registrant.h
+│  │  │  
+│  │  └─ephemeral
+│  │      └─.plugin_symlinks
+│  │          ├─path_provider_linux
+│  │          │  │  AUTHORS
+│  │          │  │  CHANGELOG.md
+│  │          │  │  LICENSE
+│  │          │  │  pubspec.yaml
+│  │          │  │  README.md
+│  │          │  │  
+│  │          │  ├─example
+│  │          │  │  │  pubspec.yaml
+│  │          │  │  │  README.md
+│  │          │  │  │  
+│  │          │  │  ├─integration_test
+│  │          │  │  │      path_provider_test.dart
+│  │          │  │  │      
+│  │          │  │  ├─lib
+│  │          │  │  │      main.dart
+│  │          │  │  │      
+│  │          │  │  ├─linux
+│  │          │  │  │  │  CMakeLists.txt
+│  │          │  │  │  │  main.cc
+│  │          │  │  │  │  my_application.cc
+│  │          │  │  │  │  my_application.h
+│  │          │  │  │  │  
+│  │          │  │  │  └─flutter
+│  │          │  │  │          CMakeLists.txt
+│  │          │  │  │          generated_plugins.cmake
+│  │          │  │  │          
+│  │          │  │  └─test_driver
+│  │          │  │          integration_test.dart
+│  │          │  │          
+│  │          │  ├─lib
+│  │          │  │  │  path_provider_linux.dart
+│  │          │  │  │  
+│  │          │  │  └─src
+│  │          │  │          get_application_id.dart
+│  │          │  │          get_application_id_real.dart
+│  │          │  │          get_application_id_stub.dart
+│  │          │  │          path_provider_linux.dart
+│  │          │  │          
+│  │          │  └─test
+│  │          │          get_application_id_test.dart
+│  │          │          path_provider_linux_test.dart
+│  │          │          
+│  │          └─shared_preferences_linux
+│  │              │  AUTHORS
+│  │              │  CHANGELOG.md
+│  │              │  LICENSE
+│  │              │  pubspec.yaml
+│  │              │  README.md
+│  │              │  
+│  │              ├─example
+│  │              │  │  pubspec.yaml
+│  │              │  │  README.md
+│  │              │  │  
+│  │              │  ├─integration_test
+│  │              │  │      shared_preferences_test.dart
+│  │              │  │      
+│  │              │  ├─lib
+│  │              │  │      main.dart
+│  │              │  │      
+│  │              │  ├─linux
+│  │              │  │  │  CMakeLists.txt
+│  │              │  │  │  main.cc
+│  │              │  │  │  my_application.cc
+│  │              │  │  │  my_application.h
+│  │              │  │  │  
+│  │              │  │  └─flutter
+│  │              │  │          CMakeLists.txt
+│  │              │  │          generated_plugins.cmake
+│  │              │  │          
+│  │              │  └─test_driver
+│  │              │          integration_test.dart
+│  │              │          
+│  │              ├─lib
+│  │              │      shared_preferences_linux.dart
+│  │              │      
+│  │              └─test
+│  │                      fake_path_provider_linux.dart
+│  │                      legacy_shared_preferences_linux_test.dart
+│  │                      shared_preferences_linux_async_test.dart
+│  │                      
+│  └─runner
+│          CMakeLists.txt
+│          main.cc
+│          my_application.cc
+│          my_application.h
+│          
+├─macos
+│  │  .gitignore
+│  │  
+│  ├─Flutter
+│  │  │  Flutter-Debug.xcconfig
+│  │  │  Flutter-Release.xcconfig
+│  │  │  GeneratedPluginRegistrant.swift
+│  │  │  
+│  │  └─ephemeral
+│  │          Flutter-Generated.xcconfig
+│  │          flutter_export_environment.sh
+│  │          
+│  ├─Runner
+│  │  │  AppDelegate.swift
+│  │  │  DebugProfile.entitlements
+│  │  │  Info.plist
+│  │  │  MainFlutterWindow.swift
+│  │  │  Release.entitlements
+│  │  │  
+│  │  ├─Assets.xcassets
+│  │  │  └─AppIcon.appiconset
+│  │  │          app_icon_1024.png
+│  │  │          app_icon_128.png
+│  │  │          app_icon_16.png
+│  │  │          app_icon_256.png
+│  │  │          app_icon_32.png
+│  │  │          app_icon_512.png
+│  │  │          app_icon_64.png
+│  │  │          Contents.json
+│  │  │          
+│  │  ├─Base.lproj
+│  │  │      MainMenu.xib
+│  │  │      
+│  │  └─Configs
+│  │          AppInfo.xcconfig
+│  │          Debug.xcconfig
+│  │          Release.xcconfig
+│  │          Warnings.xcconfig
+│  │          
+│  ├─Runner.xcodeproj
+│  │  │  project.pbxproj
+│  │  │  
+│  │  ├─project.xcworkspace
+│  │  │  └─xcshareddata
+│  │  │          IDEWorkspaceChecks.plist
+│  │  │          
+│  │  └─xcshareddata
+│  │      └─xcschemes
+│  │              Runner.xcscheme
+│  │              
+│  ├─Runner.xcworkspace
+│  │  │  contents.xcworkspacedata
+│  │  │  
+│  │  └─xcshareddata
+│  │          IDEWorkspaceChecks.plist
+│  │          
+│  └─RunnerTests
+│          RunnerTests.swift
+│          
+├─test
+│      widget_test.dart
+│      
+├─web
+│  │  favicon.png
+│  │  index.html
+│  │  manifest.json
+│  │  
+│  └─icons
+│          Icon-192.png
+│          Icon-512.png
+│          Icon-maskable-192.png
+│          Icon-maskable-512.png
+│          
+└─windows
+    │  .gitignore
+    │  CMakeLists.txt
+    │  
+    ├─flutter
+    │  │  CMakeLists.txt
+    │  │  generated_plugins.cmake
+    │  │  generated_plugin_registrant.cc
+    │  │  generated_plugin_registrant.h
+    │  │  
+    │  └─ephemeral
+    │      │  generated_config.cmake
+    │      │  
+    │      └─.plugin_symlinks
+    │          ├─path_provider_windows
+    │          │  │  AUTHORS
+    │          │  │  CHANGELOG.md
+    │          │  │  LICENSE
+    │          │  │  pubspec.yaml
+    │          │  │  README.md
+    │          │  │  
+    │          │  ├─example
+    │          │  │  │  pubspec.yaml
+    │          │  │  │  README.md
+    │          │  │  │  
+    │          │  │  ├─integration_test
+    │          │  │  │      path_provider_test.dart
+    │          │  │  │      
+    │          │  │  ├─lib
+    │          │  │  │      main.dart
+    │          │  │  │      
+    │          │  │  ├─test_driver
+    │          │  │  │      integration_test.dart
+    │          │  │  │      
+    │          │  │  └─windows
+    │          │  │      │  CMakeLists.txt
+    │          │  │      │  
+    │          │  │      ├─flutter
+    │          │  │      │      CMakeLists.txt
+    │          │  │      │      generated_plugins.cmake
+    │          │  │      │      
+    │          │  │      └─runner
+    │          │  │          │  CMakeLists.txt
+    │          │  │          │  flutter_window.cpp
+    │          │  │          │  flutter_window.h
+    │          │  │          │  main.cpp
+    │          │  │          │  resource.h
+    │          │  │          │  runner.exe.manifest
+    │          │  │          │  Runner.rc
+    │          │  │          │  run_loop.cpp
+    │          │  │          │  run_loop.h
+    │          │  │          │  utils.cpp
+    │          │  │          │  utils.h
+    │          │  │          │  win32_window.cpp
+    │          │  │          │  win32_window.h
+    │          │  │          │  
+    │          │  │          └─resources
+    │          │  │                  app_icon.ico
+    │          │  │                  
+    │          │  ├─lib
+    │          │  │  │  path_provider_windows.dart
+    │          │  │  │  
+    │          │  │  └─src
+    │          │  │          folders.dart
+    │          │  │          folders_stub.dart
+    │          │  │          guid.dart
+    │          │  │          path_provider_windows_real.dart
+    │          │  │          path_provider_windows_stub.dart
+    │          │  │          win32_wrappers.dart
+    │          │  │          
+    │          │  └─test
+    │          │          guid_test.dart
+    │          │          path_provider_windows_test.dart
+    │          │          
+    │          └─shared_preferences_windows
+    │              │  AUTHORS
+    │              │  CHANGELOG.md
+    │              │  LICENSE
+    │              │  pubspec.yaml
+    │              │  README.md
+    │              │  
+    │              ├─example
+    │              │  │  AUTHORS
+    │              │  │  LICENSE
+    │              │  │  pubspec.yaml
+    │              │  │  README.md
+    │              │  │  
+    │              │  ├─integration_test
+    │              │  │      shared_preferences_test.dart
+    │              │  │      
+    │              │  ├─lib
+    │              │  │      main.dart
+    │              │  │      
+    │              │  ├─test_driver
+    │              │  │      integration_test.dart
+    │              │  │      
+    │              │  └─windows
+    │              │      │  CMakeLists.txt
+    │              │      │  
+    │              │      ├─flutter
+    │              │      │      CMakeLists.txt
+    │              │      │      generated_plugins.cmake
+    │              │      │      
+    │              │      └─runner
+    │              │          │  CMakeLists.txt
+    │              │          │  flutter_window.cpp
+    │              │          │  flutter_window.h
+    │              │          │  main.cpp
+    │              │          │  resource.h
+    │              │          │  runner.exe.manifest
+    │              │          │  Runner.rc
+    │              │          │  run_loop.cpp
+    │              │          │  run_loop.h
+    │              │          │  utils.cpp
+    │              │          │  utils.h
+    │              │          │  win32_window.cpp
+    │              │          │  win32_window.h
+    │              │          │  
+    │              │          └─resources
+    │              │                  app_icon.ico
+    │              │                  
+    │              ├─lib
+    │              │      shared_preferences_windows.dart
+    │              │      
+    │              └─test
+    │                      fake_path_provider_windows.dart
+    │                      legacy_shared_preferences_windows_test.dart
+    │                      shared_preferences_windows_async_test.dart
+    │                      
+    └─runner
+        │  CMakeLists.txt
+        │  flutter_window.cpp
+        │  flutter_window.h
+        │  main.cpp
+        │  resource.h
+        │  runner.exe.manifest
+        │  Runner.rc
+        │  utils.cpp
+        │  utils.h
+        │  win32_window.cpp
+        │  win32_window.h
+        │  
+        └─resources
+                app_icon.ico
+                
