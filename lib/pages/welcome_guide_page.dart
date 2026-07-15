@@ -25,12 +25,17 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
   // 动画步数控制
   int _animationStep = 0;
 
+  // 绑定成功相关
+  bool _showSuccessPage = false;
+  String _partnerNickname = '';
+
   final List<GuidePageData> _pages = const [
     GuidePageData(
       title: '欢迎来到 LOME',
       subtitle: '你和TA的专属空间',
       showCodeSection: false,
       showStartButton: false,
+      isSuccessPage: false,
     ),
     GuidePageData(
       title: '邀请TA',
@@ -38,6 +43,7 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
       description: '与你喜欢的人，共同开启这段旅程',
       showCodeSection: true,
       showStartButton: false,
+      isSuccessPage: false,
     ),
     GuidePageData(
       title: '准备好了吗',
@@ -45,6 +51,15 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
       description: '开始你们的专属旅程',
       showCodeSection: false,
       showStartButton: true,
+      isSuccessPage: false,
+    ),
+    GuidePageData(
+      title: '🎉 绑定成功！',
+      subtitle: '',  // 动态填入伴侣昵称
+      description: '开启属于你们的旅程吧 💕',
+      showCodeSection: false,
+      showStartButton: true,
+      isSuccessPage: true,
     ),
   ];
 
@@ -55,18 +70,18 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
   }
 
   void _startAnimations() async {
-    // 第一步：立即出现
     setState(() => _animationStep = 0);
-  await Future.delayed(const Duration(milliseconds: 100));
-  
-  setState(() => _animationStep = 1);
-  await Future.delayed(const Duration(milliseconds: 1200));
+    await Future.delayed(const Duration(milliseconds: 100));
 
-  setState(() => _animationStep = 2);
-  await Future.delayed(const Duration(milliseconds: 1200));
+    setState(() => _animationStep = 1);
+    await Future.delayed(const Duration(milliseconds: 1200));
 
-  setState(() => _animationStep = 3);
-}
+    setState(() => _animationStep = 2);
+    await Future.delayed(const Duration(milliseconds: 1200));
+
+    setState(() => _animationStep = 3);
+  }
+
   @override
   void dispose() {
     _bindCodeController.dispose();
@@ -81,7 +96,6 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
         onPageChanged: (index) {
           setState(() {
             _currentPage = index;
-            // 切页时重置查找模式
             if (index != 1) {
               _isSearchMode = false;
               _bindCodeController.clear();
@@ -102,6 +116,10 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
 
   Widget _buildPage(GuidePageData data, int index) {
     final bgImage = 'assets/images/welcome_bg_${index + 1}.png';
+    final isSuccess = data.isSuccessPage && _showSuccessPage;
+    final displaySubtitle = isSuccess
+        ? '你和 $_partnerNickname 成为了伴侣'
+        : data.subtitle;
 
     return Container(
       width: double.infinity,
@@ -115,30 +133,31 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
       child: SafeArea(
         child: Column(
           children: [
-            // ===== 顶部：跳过按钮 =====
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const HomePage()),
-                      );
-                    },
-                    child: Text(
-                      '跳过',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white.withOpacity(0.6),
+            // ===== 顶部：跳过按钮（成功页隐藏） =====
+            if (!isSuccess)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const HomePage()),
+                        );
+                      },
+                      child: Text(
+                        '跳过',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.6),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
             Expanded(
               child: Padding(
@@ -146,7 +165,6 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // ===== 毛玻璃卡片容器（第2页用） =====
                     if (data.showCodeSection) ...[
                       _buildGlassCard(
                         child: Column(
@@ -181,21 +199,59 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
                               ),
                             ),
                             const SizedBox(height: 28),
-
-                            // 核心功能区域
                             _buildCodeSection(),
                           ],
                         ),
                       ),
                     ],
 
-                    // ===== 非卡片页面 =====
                     if (!data.showCodeSection) ...[
-                      // 欢迎页（index == 0）用动画
                       if (index == 0) ...[
                         _buildAnimatedWelcomeContent(),
+                      ] else if (isSuccess) ...[
+                        // ✅ 第4页：绑定成功
+                        Column(
+                          children: [
+                            const Icon(
+                              Icons.favorite,
+                              size: 72,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              data.title,
+                              style: TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              displaySubtitle,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.white.withOpacity(0.9),
+                                letterSpacing: 1,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              data.description,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white.withOpacity(0.6),
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            const SizedBox(height: 40),
+                            _buildStartButton(label: '开始旅程'),
+                          ],
+                        ),
                       ] else ...[
-                        // 第3页（开始页）
+                        // 第3页：准备好了吗
                         if (data.title.isNotEmpty)
                           Text(
                             data.title,
@@ -207,9 +263,9 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
                             ),
                           ),
                         const SizedBox(height: 12),
-                        if (data.subtitle.isNotEmpty)
+                        if (displaySubtitle.isNotEmpty)
                           Text(
-                            data.subtitle,
+                            displaySubtitle,
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -236,28 +292,28 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
               ),
             ),
 
-            // ===== 底部：进度指示器 =====
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _pages.length,
-                  (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 1200),
-                    margin: const EdgeInsets.symmetric(horizontal: 5),
-                    width: _currentPage == index ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: _currentPage == index
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(4),
+            if (!isSuccess)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    _pages.length,
+                    (index) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 1200),
+                      margin: const EdgeInsets.symmetric(horizontal: 5),
+                      width: _currentPage == index ? 24 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: _currentPage == index
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -268,7 +324,6 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
   Widget _buildAnimatedWelcomeContent() {
     return Column(
       children: [
-        // 第一个：欢迎来到LOME
         if (_animationStep >= 1)
           TweenAnimationBuilder<double>(
             duration: const Duration(milliseconds: 1200),
@@ -308,7 +363,6 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
 
         if (_animationStep >= 1) const SizedBox(height: 16),
 
-        // 第二个：柔软 · 看见 · 成长
         if (_animationStep >= 2)
           TweenAnimationBuilder<double>(
             duration: const Duration(milliseconds: 1200),
@@ -335,7 +389,6 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
 
         if (_animationStep >= 2) const SizedBox(height: 12),
 
-        // 第三个：你们的专属空间
         if (_animationStep >= 3)
           TweenAnimationBuilder<double>(
             duration: const Duration(milliseconds: 1200),
@@ -389,7 +442,6 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
   Widget _buildCodeSection() {
     return Column(
       children: [
-        // 如果正在查找模式，显示输入框
         if (_isSearchMode) ...[
           _buildSearchInput(),
           const SizedBox(height: 12),
@@ -414,7 +466,6 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
             ],
           ),
         ] else if (_generatedCode.isNotEmpty) ...[
-          // 已生成绑定码，展示
           _buildCodeDisplay(),
           const SizedBox(height: 16),
           TextButton(
@@ -432,7 +483,6 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
             ),
           ),
         ] else ...[
-          // 默认：出示代号 + 或 + 查找代号
           _buildGenerateButton(),
           const SizedBox(height: 20),
           Row(
@@ -756,17 +806,12 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
     try {
       final result = await AuthService().useBindCode(code);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🎉 绑定成功！和 ${result['partnerNickname']} 成为伴侣啦！'),
-            backgroundColor: Colors.green.withOpacity(0.8),
-          ),
-        );
-        // 跳转到首页
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
+        setState(() {
+          _showSuccessPage = true;
+          _partnerNickname = result['partnerNickname']!;
+        });
+        _pageController.jumpToPage(3);
+        ScaffoldMessenger.of(context).clearSnackBars();
       }
     } catch (e) {
       if (mounted) {
@@ -779,7 +824,7 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
   }
 
   // ===== 开始按钮 =====
-  Widget _buildStartButton() {
+  Widget _buildStartButton({String label = '开始'}) {
     return GestureDetector(
       onTap: () {
         Navigator.pushReplacement(
@@ -789,20 +834,27 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
       },
       child: Container(
         width: double.infinity,
-        height: 60,
+        height: 56,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.10),
+          color: Colors.white.withOpacity(0.12),
           borderRadius: BorderRadius.circular(32),
           border: Border.all(
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withOpacity(0.20),
             width: 1.5,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.white.withOpacity(0.05),
+              blurRadius: 20,
+              spreadRadius: 5,
+            ),
+          ],
         ),
-        child: const Center(
+        child: Center(
           child: Text(
-            '开始',
+            label,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.w500,
               color: Colors.white,
               letterSpacing: 4,
@@ -820,6 +872,7 @@ class GuidePageData {
   final String description;
   final bool showCodeSection;
   final bool showStartButton;
+  final bool isSuccessPage;
 
   const GuidePageData({
     required this.title,
@@ -827,5 +880,6 @@ class GuidePageData {
     this.description = '',
     this.showCodeSection = false,
     this.showStartButton = false,
+    this.isSuccessPage = false,
   });
 }
