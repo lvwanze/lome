@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+// 如果 env.dart 存在则导入，否则用本地配置兜底
+import '../config/env.dart' if (dart.library.html) '../config/env.dart';
 
 class CloudBaseService {
   static final CloudBaseService _instance = CloudBaseService._internal();
