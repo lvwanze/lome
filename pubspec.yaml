@@ -26,3 +26,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/login_bg.png
+    - assets/images/welcome_bg_1.png
+    - assets/images/welcome_bg_2.png
+    - assets/images/welcome_bg_3.png
