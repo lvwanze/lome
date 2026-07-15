@@ -170,16 +170,34 @@ class AuthService {
   /// 接口：POST /api/v1/bind/generate
   /// 返回：绑定码
   Future<String> generateBindCode() async {
-    final response = await _request<Map<String, dynamic>>(
-      'POST',
-      AppConstants.generateBindCodeEndpoint,
-      fromJsonT: (data) => data as Map<String, dynamic>,
-      needAuth: true,
-    );
-    if (!response.isSuccess) {
-      throw Exception(_getErrorMessage(response.code, response.message));
+    final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.generateBindCodeEndpoint}');
+    final headers = _getHeaders(needAuth: true);
+
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+      );
+
+      if (response.statusCode == 401) {
+        await logout();
+        throw Exception('登录已过期，请重新登录');
+      }
+
+      if (response.statusCode >= 500) {
+        throw Exception('服务器开小差了，请稍后再试');
+      }
+
+      final jsonData = jsonDecode(response.body);
+      print('generateBindCode 原始响应: $jsonData');
+
+      final data = jsonData['data'] as Map<String, dynamic>;
+      final bindCode = data['bindCode'].toString();
+      return bindCode;
+    } catch (e) {
+      print('生成绑定码失败: $e');
+      rethrow;
     }
-    return response.data!['bindCode'] as String;
   }
 
   // ---------- 4.5 使用绑定码 ----------
@@ -187,22 +205,44 @@ class AuthService {
   /// 接口：POST /api/v1/bind/use
   /// 返回：伴侣信息（partnerId, partnerNickname），同时自动刷新本地用户信息
   Future<Map<String, String>> useBindCode(String code) async {
-    final response = await _request<Map<String, dynamic>>(
-      'POST',
-      AppConstants.useBindCodeEndpoint,
-      body: {'bindCode': code},
-      fromJsonT: (data) => data as Map<String, dynamic>,
-      needAuth: true,
-    );
-    if (!response.isSuccess) {
-      throw Exception(_getErrorMessage(response.code, response.message));
+    final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.useBindCodeEndpoint}');
+    final headers = _getHeaders(needAuth: true);
+    final body = jsonEncode({'bindCode': code});
+
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: body,
+      );
+
+      if (response.statusCode == 401) {
+        await logout();
+        throw Exception('登录已过期，请重新登录');
+      }
+
+      if (response.statusCode >= 500) {
+        throw Exception('服务器开小差了，请稍后再试');
+      }
+
+      final jsonData = jsonDecode(response.body);
+      print('useBindCode 原始响应: $jsonData');
+
+      final codeResult = jsonData['code'] as int;
+      if (codeResult != 0) {
+        throw Exception(_getErrorMessage(codeResult, jsonData['message'] ?? ''));
+      }
+
+      final data = jsonData['data'] as Map<String, dynamic>;
+      await getUserInfo();
+      return {
+        'partnerId': data['partnerId'].toString(),
+        'partnerNickname': data['partnerNickname'].toString(),
+      };
+    } catch (e) {
+      print('使用绑定码失败: $e');
+      rethrow;
     }
-    final data = response.data!;
-    await getUserInfo(); // 绑定成功后刷新本地用户信息
-    return {
-      'partnerId': data['partnerId'] as String,
-      'partnerNickname': data['partnerNickname'] as String,
-    };
   }
 
   // ---------- 4.6 解除绑定 ----------
