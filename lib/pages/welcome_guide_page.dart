@@ -44,7 +44,6 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
       description: '与你喜欢的人，共同开启这段旅程',
       showCodeSection: true,
       showStartButton: false,
-      isSuccessPage: false,
     ),
   ];
 
