@@ -697,8 +697,9 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
   // ===== 使用绑定码 =====
   Future<void> _handleBindCode() async {
     if (_isBinding) return;
-
+    print('🔍 输入框内容：${_bindCodeController.text}');
     final code = _bindCodeController.text.trim().toUpperCase();
+    print('🔍 处理后 code：$code');
     if (code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请输入6位代号')),
