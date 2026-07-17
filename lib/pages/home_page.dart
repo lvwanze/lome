@@ -5,6 +5,56 @@ import 'package:lome/utils/app_fonts.dart';
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
+  // 退出登录弹窗
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFFFDF7F0),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          "退出登录",
+          style: GoogleFonts.caveat(
+            fontSize: 24,
+            color: const Color(0xFF5D4E3C),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: const Text("确定要退出当前账号吗？"),
+        contentTextStyle: TextStyle(color: Colors.grey[600]),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          // 取消按钮
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              "取消",
+              style: TextStyle(color: Colors.grey[500]),
+            ),
+          ),
+          // 退出登录按钮
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.pink.shade200,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              // 关闭弹窗
+              Navigator.pop(ctx);
+              // 退出登录逻辑：清空本地存储、跳转登录页
+              // TODO: 这里替换为你的登录页面路由
+              Navigator.pushReplacementNamed(context, '/login');
+            },
+            child: const Text(
+              "退出登录",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -15,7 +65,7 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 顶部：日期 + 虚拟形象
+              // 顶部：日期 + 虚拟形象（添加点击事件）
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -40,29 +90,32 @@ class HomePage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // 虚拟形象占位
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.pink.shade200, Colors.pink.shade100],
+                  // 虚拟形象：外层包裹GestureDetector，点击弹出退出弹窗
+                  GestureDetector(
+                    onTap: () => _showLogoutDialog(context),
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.pink.shade200, Colors.pink.shade100],
+                        ),
+                        shape: BoxShape.circle,
                       ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.favorite,
-                        color: Colors.white,
-                        size: 28,
+                      child: const Center(
+                        child: Icon(
+                          Icons.favorite,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // 欢迎语
               Text(
                 '今天想和TA',
@@ -80,7 +133,7 @@ class HomePage extends StatelessWidget {
                   color: const Color(0xFF5D4E3C),
                 ),
               ),
-              
+
               const Spacer(),
 
               // 装饰元素
