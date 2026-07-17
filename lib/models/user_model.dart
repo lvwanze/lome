@@ -22,7 +22,7 @@ class User {
       userId: json['userId'] ?? '',
       phone: json['phone'] ?? '',
       nickname: json['nickname'] ?? '用户',
-      isBound: json['isBound'] ?? false,
+      isBound: json['isBound'] == true || json['isBound'] == 'true',
       partnerId: json['partnerId'],
       partnerNickname: json['partnerNickname'],
     );
