@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:lome/pages/login_page.dart';
+import 'package:lome/pages/welcome_guide_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final bool isBound;
@@ -292,7 +293,23 @@ class _ProfilePageState extends State<ProfilePage> {
                       const SizedBox(height: 16),
                       _buildItemGlass(
                         title: _isBound ? "       解除绑定" : "       前往绑定",
-                        onTap: () => setState(() => _isBound = !_isBound),
+                        onTap: () async {
+                          if (!_isBound) {
+                            // 跳转欢迎绑定页面
+                            final bindSuccess = await Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => WelcomeGuidePage()),
+                            );
+                            // 绑定成功后刷新页面状态
+                            if (bindSuccess == true) {
+                              setState(() {
+                                _isBound = true;
+                              });
+                            }
+                          } else {
+                            setState(() => _isBound = !_isBound);
+                          }
+                        },
                       ),
                       const SizedBox(height: 16),
                       _buildItemGlass(
