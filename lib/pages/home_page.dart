@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lome/utils/app_fonts.dart';
+import 'package:lome/pages/profile_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -39,10 +40,7 @@ class HomePage extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
-              // 关闭弹窗
               Navigator.pop(ctx);
-              // 退出登录逻辑：清空本地存储、跳转登录页
-              // TODO: 这里替换为你的登录页面路由
               Navigator.pushReplacementNamed(context, '/login');
             },
             child: const Text(
@@ -51,6 +49,16 @@ class HomePage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // 跳转个人信息页
+  void _goProfilePage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProfilePage(isBound: false),
       ),
     );
   }
@@ -65,7 +73,7 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 顶部：日期 + 虚拟形象（添加点击事件）
+              // 顶部日期 + 头像
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -90,9 +98,10 @@ class HomePage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // 虚拟形象：外层包裹GestureDetector，点击弹出退出弹窗
+                  // 单击头像跳个人页，长按弹出退出弹窗
                   GestureDetector(
-                    onTap: () => _showLogoutDialog(context),
+                    onTap: () => _goProfilePage(context),
+                    onLongPress: () => _showLogoutDialog(context),
                     child: Container(
                       width: 56,
                       height: 56,
@@ -116,7 +125,7 @@ class HomePage extends StatelessWidget {
 
               const SizedBox(height: 40),
 
-              // 欢迎语
+              // 欢迎文字
               Text(
                 '今天想和TA',
                 style: GoogleFonts.caveat(
@@ -136,7 +145,7 @@ class HomePage extends StatelessWidget {
 
               const Spacer(),
 
-              // 装饰元素
+              // 中间装饰
               Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -152,7 +161,7 @@ class HomePage extends StatelessWidget {
 
               const SizedBox(height: 32),
 
-              // 4个核心功能入口（底部）
+              // 底部四大功能入口
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
