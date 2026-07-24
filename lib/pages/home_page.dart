@@ -6,9 +6,7 @@ import 'package:lome/models/user_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lome/pages/Profile_Page.dart';
 import 'package:lome/pages/settings_page.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:lome/utils/app_constants.dart';
+
 
 
 class HomePage extends StatefulWidget {
@@ -662,66 +660,17 @@ class _CloudButtonState extends State<CloudButton>
     _controller.reverse();
   }
 
-  String _getInteractionType(String label) {
-    switch (label) {
-      case '干杯':
-        return 'cheers';
-      case '抱抱':
-        return 'hug';
-      case '贴贴':
-        return 'kiss';
-      default:
-        return 'hug';
-    }
-  }
-
-  void _onTap() async {
+  void _onTap() {
     if (Theme.of(context).platform == TargetPlatform.iOS ||
         Theme.of(context).platform == TargetPlatform.android) {
       HapticFeedback.lightImpact();
     }
-
-    try {
-      final response = await http.post(
-        Uri.parse('${AppConstants.baseUrl}/api/v1/interaction/send'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${AuthService().token}',
-        },
-        body: jsonEncode({'type': _getInteractionType(widget.label)}),
-      );
-
-      final data = jsonDecode(response.body);
-      if (data['code'] == 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('💕 发送了 ${widget.label}！'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      } else if (data['code'] == 8001) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('操作太频繁，请稍后再试'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(data['message'] ?? '发送失败'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('网络异常，请稍后再试'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('💕 发送了 ${widget.label}！'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
 
   @override
