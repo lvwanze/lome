@@ -157,11 +157,11 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 4),
+                const SizedBox(height: 40),
                 Stack(
                   alignment: Alignment.center,
                   children: [
@@ -172,20 +172,24 @@ class _ProfilePageState extends State<ProfilePage> {
                     const Text(
                       "个人信息",
                       style: TextStyle(
-                        fontSize: 25,
-                        color: Color(0xFFA8C5CE),
+                        fontSize:30,
+                        color: Color(0xFFBED5DB),
                         letterSpacing: 2,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  height: 2.0,
-                  color: const Color(0xFFDDEBEB).withOpacity(0.6),
-                ),
-
+                const SizedBox(height: 16),
+               Center(
+                  child: Container(
+                  width: 1600.0,
+                  height: 10.0,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFAFC5AE).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(100.0),
+                  ),
+                 ),
+               ),
                 const SizedBox(height: 30),
 
                 // 圆形头像
@@ -208,7 +212,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   "UserName",
                   style: TextStyle(
                     fontSize: 30,
-                    color: Color(0xFFC9B89E),
+                    fontWeight: FontWeight.w300,
+                    color: Color(0xFFC4B8A8),
                     letterSpacing: 2,
                   ),
                 ),

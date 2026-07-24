@@ -3,11 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lome/services/auth_service.dart';
 import 'package:lome/models/user_model.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lome/pages/Profile_Page.dart';
+import 'package:lome/pages/settings_page.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:lome/utils/app_constants.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   // 退出登录弹窗
+// ignore: unused_element
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -54,15 +62,7 @@ class HomePage extends StatefulWidget {
     );
   }
 
-  // 跳转个人信息页
-  void _goProfilePage(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ProfilePage(isBound: false),
-      ),
-    );
-  }
+  
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -96,6 +96,9 @@ class _HomePageState extends State<HomePage> {
     setState(() => _isLoading = true);
     try {
       final user = await AuthService().getUserInfo();
+      print('📦 昵称: ${user.nickname}');
+      print('📦 绑定状态: ${user.isBound}');
+      print('📦 伴侣昵称: ${user.partnerNickname}');
       if (mounted) {
         setState(() {
           _user = user;
@@ -226,11 +229,16 @@ Widget _buildUserInfoEntry({
     onTapCancel: () => setState(() => _infoEntryScale = 1.0),
     onTap: () {
       _onTapWithHaptic(() {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('跳转个人信息页（开发中）')),
-        );
-      });
-    },
+       Navigator.push(
+        context,
+        MaterialPageRoute(
+        builder: (_) => ProfilePage(
+          isBound: _user?.isBound ?? false,
+        ),
+      ),
+    );
+  });
+ },
     child: AnimatedScale(
       duration: const Duration(milliseconds: 150),
       curve: Curves.elasticOut,
@@ -302,10 +310,11 @@ Widget _buildSettingsButton({required double avatarSize}) {
     onTapCancel: () => setState(() => _settingsScale = 1.0),
     onTap: () {
       _onTapWithHaptic(() {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('设置页开发中')),
-        );
-      });
+      Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsPage()),
+    );
+  });
     },
     child: AnimatedScale(
       duration: const Duration(milliseconds: 150),
@@ -653,17 +662,66 @@ class _CloudButtonState extends State<CloudButton>
     _controller.reverse();
   }
 
-  void _onTap() {
+  String _getInteractionType(String label) {
+    switch (label) {
+      case '干杯':
+        return 'cheers';
+      case '抱抱':
+        return 'hug';
+      case '贴贴':
+        return 'kiss';
+      default:
+        return 'hug';
+    }
+  }
+
+  void _onTap() async {
     if (Theme.of(context).platform == TargetPlatform.iOS ||
         Theme.of(context).platform == TargetPlatform.android) {
       HapticFeedback.lightImpact();
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('💕 发送了 ${widget.label}'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/api/v1/interaction/send'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${AuthService().token}',
+        },
+        body: jsonEncode({'type': _getInteractionType(widget.label)}),
+      );
+
+      final data = jsonDecode(response.body);
+      if (data['code'] == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('💕 发送了 ${widget.label}！'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      } else if (data['code'] == 8001) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('操作太频繁，请稍后再试'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? '发送失败'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('网络异常，请稍后再试'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override

@@ -4,6 +4,7 @@ import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/bind_success_page.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AuthService.init();
