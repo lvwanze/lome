@@ -44,6 +44,7 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
       description: '与你喜欢的人，共同开启这段旅程',
       showCodeSection: true,
       showStartButton: false,
+      isSuccessPage: false,
     ),
   ];
 
@@ -54,15 +55,19 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
   }
 
   void _startAnimations() async {
+    if (!mounted) return;
     setState(() => _animationStep = 0);
     await Future.delayed(const Duration(milliseconds: 100));
 
+    if (!mounted) return; 
     setState(() => _animationStep = 1);
     await Future.delayed(const Duration(milliseconds: 1200));
 
+    if (!mounted) return; 
     setState(() => _animationStep = 2);
     await Future.delayed(const Duration(milliseconds: 1200));
 
+    if (!mounted) return;
     setState(() => _animationStep = 3);
   }
 
