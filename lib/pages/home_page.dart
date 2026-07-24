@@ -7,6 +7,63 @@ import 'package:lome/models/user_model.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
+  // 退出登录弹窗
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFFFDF7F0),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          "退出登录",
+          style: GoogleFonts.caveat(
+            fontSize: 24,
+            color: const Color(0xFF5D4E3C),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: const Text("确定要退出当前账号吗？"),
+        contentTextStyle: TextStyle(color: Colors.grey[600]),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          // 取消按钮
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              "取消",
+              style: TextStyle(color: Colors.grey[500]),
+            ),
+          ),
+          // 退出登录按钮
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.pink.shade200,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pushReplacementNamed(context, '/login');
+            },
+            child: const Text(
+              "退出登录",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 跳转个人信息页
+  void _goProfilePage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProfilePage(isBound: false),
+      ),
+    );
+  }
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
