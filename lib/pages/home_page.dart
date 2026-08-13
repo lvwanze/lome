@@ -5,6 +5,7 @@ import 'package:lome/services/auth_service.dart';
 import 'package:lome/models/user_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lome/pages/Profile_Page.dart';
+import 'package:lome/pages/calendar_page.dart';
 import 'package:lome/pages/settings_page.dart';
 import 'package:lome/pages/calendar_home_page.dart';
 
@@ -549,11 +550,21 @@ class _HomePageState extends State<HomePage> {
                     setState(() {
                       _selectedTab = index;
                     });
+<<<<<<< Updated upstream
                     // index=0 日历页面跳转
                     if (index == 0) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const CalendarHomePage()),
+=======
+
+                    if (index == 0) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CalendarPage(),
+                        ),
+>>>>>>> Stashed changes
                       );
                     }
                   });

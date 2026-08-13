@@ -3,6 +3,7 @@ import 'package:lome/services/auth_service.dart';
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/bind_success_page.dart';
+import 'pages/calendar_page.dart';
 
 
 void main() async {
@@ -27,6 +28,7 @@ class LomeApp extends StatelessWidget {
         '/splash': (context) => const SplashCheck(),
         '/login': (context) => const LoginPage(),
         '/home': (context) => const HomePage(),
+        '/calendar': (context) => const CalendarPage(),
         '/bind_success': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as String?;
           return BindSuccessPage(partnerNickname: args ?? '伴侣');
