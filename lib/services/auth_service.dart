@@ -126,6 +126,7 @@ class AuthService {
       throw Exception(_getErrorMessage(response.code, response.message));
     }
     final data = response.data!;
+    print('【登录响应】完整数据: $data');
     await _saveToken(data['token'] as String);
     final user = User(
       userId: data['userId'] ?? '',

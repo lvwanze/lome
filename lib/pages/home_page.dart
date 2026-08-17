@@ -549,11 +549,13 @@ class _HomePageState extends State<HomePage> {
                     setState(() {
                       _selectedTab = index;
                     });
-                    // index=0 日历页面跳转
+
                     if (index == 0) {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const CalendarHomePage()),
+                        MaterialPageRoute(
+                          builder: (_) => const CalendarPage(),
+                        ),
                       );
                     }
                   });
