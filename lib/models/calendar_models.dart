@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 /// 日历数据模型
 
 /// 月历概览响应
@@ -21,6 +23,14 @@ class MonthlyCalendarResponse {
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'month': month,
+      'recordedDays': recordedDays,
+      'days': days.map((e) => e.toJson()).toList(),
+    };
+  }
 }
 
 /// 单日日历数据
@@ -31,6 +41,7 @@ class CalendarDayData {
   final bool hasImportantDay;
   final int planPendingCount;
   final String? importantDayName;
+  final String? importantDayId;
 
   CalendarDayData({
     required this.date,
@@ -39,18 +50,47 @@ class CalendarDayData {
     required this.hasImportantDay,
     required this.planPendingCount,
     this.importantDayName,
+    this.importantDayId,
   });
 
   factory CalendarDayData.fromJson(Map<String, dynamic> json) {
+    // 打印原始数据以便调试
+    print('【CalendarDayData解析】原始JSON: $json');
+
     return CalendarDayData(
       date: json['date'] ?? '',
       hasRecord: json['hasRecord'] ?? false,
       hasPlan: json['hasPlan'] ?? false,
       hasImportantDay: json['hasImportantDay'] ?? false,
       planPendingCount: json['planPendingCount'] ?? 0,
-      importantDayName: json['importantDayName'],
+      importantDayName: json['importantDayName'] ?? json['importantDayName'] ?? '',
+      // 尝试从多个可能的字段获取ID
+      importantDayId: json['importantDayId'] ??
+                      json['important_day_id'] ??
+                      json['id'] ??
+                      json['importantDayId'].toString() ??
+                      (json['importantDay'] is Map ? json['importantDay']['importantDayId'] : null) ??
+                      (json['importantDay'] is Map ? json['importantDay']['id'] : null),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'date': date,
+      'hasRecord': hasRecord,
+      'hasPlan': hasPlan,
+      'hasImportantDay': hasImportantDay,
+      'planPendingCount': planPendingCount,
+      'importantDayName': importantDayName,
+      'importantDayId': importantDayId,
+    };
+  }
+
+  /// 便捷方法：是否有任何内容
+  bool get hasAnyContent => hasRecord || hasPlan || hasImportantDay;
+
+  /// 便捷方法：获取重要日显示名称
+  String get displayImportantDayName => importantDayName ?? '重要日';
 }
 
 /// 日详情响应
@@ -70,6 +110,8 @@ class DailyDetailResponse {
   });
 
   factory DailyDetailResponse.fromJson(Map<String, dynamic> json) {
+    print('【DailyDetailResponse解析】原始JSON: $json');
+
     return DailyDetailResponse(
       date: json['date'] ?? '',
       records: (json['records'] as List? ?? [])
@@ -84,6 +126,25 @@ class DailyDetailResponse {
           : null,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'date': date,
+      'records': records.map((e) => e.toJson()).toList(),
+      'plans': plans.map((e) => e.toJson()).toList(),
+      'planPendingCount': planPendingCount,
+      'importantDay': importantDay?.toJson(),
+    };
+  }
+
+  /// 便捷方法：是否有记录
+  bool get hasRecords => records.isNotEmpty;
+
+  /// 便捷方法：是否有规划
+  bool get hasPlans => plans.isNotEmpty;
+
+  /// 便捷方法：是否有重要日
+  bool get hasImportantDay => importantDay != null;
 }
 
 /// 记录数据
@@ -117,6 +178,24 @@ class RecordData {
       createTime: json['createTime'] ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'recordId': recordId,
+      'content': content,
+      'images': images,
+      'mood': mood,
+      'authorId': authorId,
+      'authorNickname': authorNickname,
+      'createTime': createTime,
+    };
+  }
+
+  /// 便捷方法：获取创建时间
+  DateTime get createDateTime => DateTime.fromMillisecondsSinceEpoch(createTime);
+
+  /// 便捷方法：是否有图片
+  bool get hasImages => images.isNotEmpty;
 }
 
 /// 规划数据
@@ -144,6 +223,19 @@ class PlanData {
       authorNickname: json['authorNickname'] ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'planId': planId,
+      'title': title,
+      'completed': completed,
+      'authorId': authorId,
+      'authorNickname': authorNickname,
+    };
+  }
+
+  /// 便捷方法：获取完成状态文本
+  String get statusText => completed ? '已完成' : '未完成';
 }
 
 /// 重要日数据
@@ -165,13 +257,68 @@ class ImportantDayData {
   });
 
   factory ImportantDayData.fromJson(Map<String, dynamic> json) {
+    print('【ImportantDayData解析】原始JSON: $json');
+
     return ImportantDayData(
-      importantDayId: json['importantDayId'] ?? '',
+      importantDayId: json['importantDayId'] ??
+                      json['important_day_id'] ??
+                      json['id'] ??
+                      '',
       name: json['name'] ?? '',
       date: json['date'] ?? '',
       repeatType: json['repeatType'] ?? 'once',
       icon: json['icon'] ?? 'star',
       createdBy: json['createdBy'] ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'importantDayId': importantDayId,
+      'name': name,
+      'date': date,
+      'repeatType': repeatType,
+      'icon': icon,
+      'createdBy': createdBy,
+    };
+  }
+
+  /// 便捷方法：解析日期
+  DateTime get dateTime {
+    try {
+      return DateTime.parse(date);
+    } catch (e) {
+      return DateTime.now();
+    }
+  }
+
+  /// 便捷方法：获取重复类型文本
+  String get repeatTypeText {
+    switch (repeatType) {
+      case 'yearly':
+        return '每年';
+      case 'monthly':
+        return '每月';
+      case 'weekly':
+        return '每周';
+      default:
+        return '仅一次';
+    }
+  }
+
+  /// 便捷方法：获取图标
+  IconData get iconData {
+    switch (icon) {
+      case 'heart':
+        return Icons.favorite;
+      case 'cake':
+        return Icons.cake;
+      case 'flag':
+        return Icons.flag;
+      case 'gift':
+        return Icons.card_giftcard;
+      default:
+        return Icons.star;
+    }
   }
 }
