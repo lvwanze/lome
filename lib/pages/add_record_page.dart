@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:lome/services/api_service.dart';
 
-class AddPlanPage extends StatefulWidget {
+class AddRecordPage extends StatefulWidget {
   final DateTime selectedDate;
-  final Map<String, dynamic>? existingPlan;
-  const AddPlanPage({
+  final Map<String, dynamic>? existingRecord;
+  const AddRecordPage({
     super.key,
     required this.selectedDate,
-    this.existingPlan,
+    this.existingRecord,
   });
 
   @override
-  State<AddPlanPage> createState() => _AddPlanPageState();
+  State<AddRecordPage> createState() => _AddRecordPageState();
 }
 
-class _AddPlanPageState extends State<AddPlanPage> {
+class _AddRecordPageState extends State<AddRecordPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   List<Uint8List> _imageBytes = [];
@@ -37,11 +38,18 @@ class _AddPlanPageState extends State<AddPlanPage> {
   void initState() {
     super.initState();
     // 如果有已有数据，回显到输入框
-    if (widget.existingPlan != null) {
-      _titleController.text = widget.existingPlan?['title'] ?? '';
-      _contentController.text = widget.existingPlan?['content'] ?? '';
+    if (widget.existingRecord != null) {
+      _titleController.text = widget.existingRecord?['title'] ?? '';
+      _contentController.text = widget.existingRecord?['content'] ?? '';
       // 图片回显需要从 URL 加载，这里暂不处理
     }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
   }
 
   // ============ 图片选择 ============
@@ -98,47 +106,48 @@ class _AddPlanPageState extends State<AddPlanPage> {
     );
   }
 
-  // ============ 保存 ============
-  Future<void> _savePlan() async {
-    final title = _titleController.text.trim();
-    final content = _contentController.text.trim();
-
-    if (title.isEmpty && content.isEmpty && _imageBytes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('请至少填写一项内容'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
+  // ============ 保存（允许空内容） ============
+  Future<void> _saveRecord() async {
+    if (_isSaving) return;
 
     setState(() => _isSaving = true);
 
     try {
-      // TODO: 先上传图片获取 URL，再用 URL 保存规划
-      // 目前先保存文字，图片暂时不保存到后端
-      final isEdit = widget.existingPlan != null;
+      final title = _titleController.text.trim();
+      final content = _contentController.text.trim();
+      final isEdit = widget.existingRecord != null;
+
+      // 允许空内容保存
       final response = await ApiService.post(
-        isEdit ? '/api/v1/plan/update' : '/api/v1/plan/create',
+        isEdit ? '/api/v1/record/update' : '/api/v1/record/create',
         body: isEdit
             ? {
-                'planId': widget.existingPlan?['planId'],
+                'recordId': widget.existingRecord?['recordId'],
                 'title': title,
                 'content': content,
-                'images': [],  // 暂不传图片
+                'images': [],
+                'mood': 'happy',
               }
             : {
                 'date': _formatDateKey(widget.selectedDate),
                 'title': title,
                 'content': content,
-                'images': [],  // 暂不传图片
+                'images': [],
+                'mood': 'happy',
               },
       );
 
+      print('【记录】保存响应: $response');
+
       if (response['code'] == 0) {
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isEdit ? '记录已更新' : '记录已保存'),
+              backgroundColor: const Color(0xFFA8C9A8),
+              duration: const Duration(seconds: 2),
+            ),
+          );
           Navigator.pop(context, true);
         }
       } else {
@@ -153,10 +162,70 @@ class _AddPlanPageState extends State<AddPlanPage> {
         }
       }
     } catch (e) {
+      print('【记录】保存异常: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('网络异常，请稍后再试'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  // ============ 取消记录（删除） ============
+  Future<void> _deleteRecord() async {
+    if (widget.existingRecord == null) {
+      Navigator.pop(context, false);
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      final response = await ApiService.post(
+        '/api/v1/record/delete',
+        body: {
+          'recordId': widget.existingRecord?['recordId'],
+        },
+      );
+
+      print('【记录】删除响应: $response');
+
+      if (response['code'] == 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('已取消记录'),
+              backgroundColor: Color(0xFFA8C9A8),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          Navigator.pop(context, true);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response['message'] ?? '取消失败'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('【记录】删除异常: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('取消失败，请重试'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
           ),
@@ -207,13 +276,13 @@ class _AddPlanPageState extends State<AddPlanPage> {
                           child: IconButton(
                             padding: EdgeInsets.zero,
                             icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Color(0xff888888)),
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => Navigator.pop(context, false),
                           ),
                         ),
                       ),
                       const Center(
                         child: Text(
-                          "规划",
+                          "记录",
                           style: TextStyle(
                             fontSize: 30,
                             color: Color(0xFFBED5DB),
@@ -236,24 +305,22 @@ class _AddPlanPageState extends State<AddPlanPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // ===== 计划时间（显示选中日期） =====
+                // ===== 记录时间（显示选中日期） =====
                 _buildInputCard(
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    title: const Text("计划时间", style: TextStyle(fontSize: 18, color: Color(0xff887882))),
+                    title: const Text("记录时间", style: TextStyle(fontSize: 18, color: Color(0xff887882))),
                     subtitle: Text(
                       _formatDate(widget.selectedDate),
                       style: const TextStyle(fontSize: 17, color: Color(0xffC9C0C6)),
                     ),
                     trailing: const Icon(Icons.keyboard_arrow_right, color: Color(0xffC9C0C6), size: 24),
-                    onTap: () {
-                      // 时间选择逻辑后续写在这里
-                    },
+                    onTap: () {},
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // ===== 计划标题 =====
+                // ===== 记录标题 =====
                 _buildInputCard(
                   child: TextField(
                     controller: _titleController,
@@ -261,14 +328,14 @@ class _AddPlanPageState extends State<AddPlanPage> {
                     decoration: const InputDecoration(
                       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: InputBorder.none,
-                      hintText: "和TA一起做什么",
+                      hintText: "和TA一起做了什么（可留空）",
                       hintStyle: TextStyle(fontSize: 17, color: Color(0xffC9C0C6)),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // ===== 计划备注 =====
+                // ===== 记录备注 =====
                 _buildInputCard(
                   child: Stack(
                     children: [
@@ -280,7 +347,7 @@ class _AddPlanPageState extends State<AddPlanPage> {
                         decoration: const InputDecoration(
                           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           border: InputBorder.none,
-                          hintText: "写下计划细节……",
+                          hintText: "写下故事的细节……（可留空）",
                           hintStyle: TextStyle(fontSize: 17, color: Color(0xffC9C0C6)),
                         ),
                       ),
@@ -338,18 +405,18 @@ class _AddPlanPageState extends State<AddPlanPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // ===== 保存规划按钮 =====
+                // ===== 保存记录按钮 =====
                 SizedBox(
                   width: double.infinity,
                   height: 64,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xffC2D8C8),
+                      backgroundColor: const Color(0xffF8D2DC),
                       elevation: 2,
                       shadowColor: Colors.black12,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                     ),
-                    onPressed: _isSaving ? null : _savePlan,
+                    onPressed: _isSaving ? null : _saveRecord,
                     child: _isSaving
                         ? const SizedBox(
                             width: 24,
@@ -359,20 +426,45 @@ class _AddPlanPageState extends State<AddPlanPage> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            "保存规划",
-                            style: TextStyle(fontSize: 20, color: Colors.white),
+                        : Text(
+                            widget.existingRecord != null ? "保存修改" : "保存记录",
+                            style: const TextStyle(fontSize: 20, color: Colors.white),
                           ),
                   ),
                 ),
+
+                // ===== 取消记录按钮（仅编辑时显示） =====
+                if (widget.existingRecord != null) ...[
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.withOpacity(0.1),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                          side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                        ),
+                      ),
+                      onPressed: _isSaving ? null : _deleteRecord,
+                      child: const Text(
+                        "取消记录",
+                        style: TextStyle(fontSize: 18, color: Colors.red),
+                      ),
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 14),
 
-                // ===== 取消 =====
+                // ===== 返回 =====
                 Center(
                   child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () => Navigator.pop(context, false),
                     child: const Text(
-                      "取消",
+                      "返回",
                       style: TextStyle(
                         fontSize: 18,
                         color: Color(0xffB4C8BB),
