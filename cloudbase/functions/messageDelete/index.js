@@ -1,0 +1,33 @@
+// 删除留言 DELETE /api/v1/messages/{id}（仅作者）
+const { db, getParams, getAuthUser, firstDoc } = require('./common');
+
+exports.main = async (event) => {
+  const params = getParams(event);
+
+  const { userId, error } = await getAuthUser(event);
+  if (error) return error;
+
+  const messageId = params.messageId || params.id;
+  if (!messageId) {
+    return { code: 400, message: '缺少留言ID', data: null };
+  }
+
+  try {
+    const res = await db.collection('messages').doc(String(messageId)).get();
+    const doc = firstDoc(res);
+    if (!doc) {
+      return { code: 4005, message: '留言不存在', data: null };
+    }
+    // 仅作者本人可删除
+    if (doc.authorId !== userId) {
+      return { code: 4006, message: '仅作者可删除自己的留言', data: null };
+    }
+
+    await db.collection('messages').doc(String(messageId)).remove();
+
+    return { code: 0, message: 'success', data: null };
+  } catch (e) {
+    console.error('删除留言失败:', e);
+    return { code: 500, message: '服务器内部错误', data: null };
+  }
+};

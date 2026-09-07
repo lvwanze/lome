@@ -1,11 +1,23 @@
 // 上传图片 POST /api/v1/upload/image
-// 入参：{ fileName?: string, fileContent: base64 字符串（可带 data:image/xxx;base64, 前缀） }
+// 入参：{ fileName?: string, fileContent: base64 字符串（可带 data:image/xxx;base64, 前缀）, folder?: 业务目录 }
+//   folder 可选值（按业务隔离，见任务文档 3.2）：
+//     calendar/records → 日历-记录图片
+//     calendar/plans   → 日历-规划图片
+//     messages         → 留言板图片
+//   不传 folder 时兼容旧行为：images/<userId>/
 // 返回：{ fileId, url }，url 为临时访问链接（过期后可通过 calendarDaily 重新换取）
 const { app, getParams, getUserId } = require('./common');
 
 // HTTP 访问服务请求体上限约 6MB，base64 膨胀约 33%，限制原图 3MB
 const MAX_SIZE = 3 * 1024 * 1024;
 const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'];
+
+// 业务目录白名单：防止任意路径写入
+const ALLOWED_FOLDERS = {
+  'calendar/records': true,
+  'calendar/plans': true,
+  'messages': true,
+};
 
 exports.main = async (event) => {
   const params = getParams(event);
@@ -54,7 +66,17 @@ exports.main = async (event) => {
   }
 
   try {
-    const cloudPath = `images/${userId}/${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
+    // 业务路径隔离：folder 传入时按白名单目录存放；否则兼容旧路径 images/<userId>/
+    let baseDir = `images/${userId}`;
+    const folder = typeof params.folder === 'string' ? params.folder.trim() : '';
+    if (folder) {
+      if (!ALLOWED_FOLDERS[folder]) {
+        return { code: 400, message: 'folder 仅支持 calendar/records、calendar/plans、messages', data: null };
+      }
+      baseDir = `${folder}/${userId}`;
+    }
+
+    const cloudPath = `${baseDir}/${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
     const uploadRes = await app.uploadFile({
       cloudPath,
       fileContent: buffer,
