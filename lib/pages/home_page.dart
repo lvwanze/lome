@@ -7,13 +7,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lome/pages/Profile_Page.dart';
 import 'package:lome/pages/settings_page.dart';
 import 'package:lome/pages/calendar_home_page.dart';
-
+import 'package:lome/pages/message_board_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
-  // 退出登录弹窗
-// ignore: unused_element
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -32,7 +30,6 @@ class HomePage extends StatefulWidget {
         contentTextStyle: TextStyle(color: Colors.grey[600]),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          // 取消按钮
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
@@ -40,7 +37,6 @@ class HomePage extends StatefulWidget {
               style: TextStyle(color: Colors.grey[500]),
             ),
           ),
-          // 退出登录按钮
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.pink.shade200,
@@ -60,15 +56,12 @@ class HomePage extends StatefulWidget {
     );
   }
 
-
-
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
   User? _user;
-  // ignore: unused_field
   bool _isLoading = true;
   int _selectedTab = 0;
   double _infoEntryScale = 1.0;
@@ -77,12 +70,11 @@ class _HomePageState extends State<HomePage> {
   double _avatarSwitchScale = 1.0;
 
   final List<Map<String, dynamic>> _tabs = [
-    {'label': '日历', 'icon': 'assets/images/icon_calendar.png'},
-    {'label': '留言板', 'icon': 'assets/images/icon_message_board.png'},
-    {'label': '慢信', 'icon': 'assets/images/icon_slow_message.png'},
-    {'label': '共读', 'icon': 'assets/images/icon_co_read.png'},
+    {'label': ' 日历 ', 'icon': 'assets/images/icon_calendar.png'},
+    {'label': ' 留言板 ', 'icon': 'assets/images/icon_message_board.png'},
+    {'label': ' 慢信 ', 'icon': 'assets/images/icon_slow_message.png'},
+    {'label': ' 共读 ', 'icon': 'assets/images/icon_co_read.png'},
   ];
-
 
   @override
   void initState() {
@@ -109,10 +101,10 @@ class _HomePageState extends State<HomePage> {
       }
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
-
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A2E),
       body: Container(
@@ -130,21 +122,18 @@ class _HomePageState extends State<HomePage> {
                   horizontal: isSmallScreen ? 16.0 : 100.0,
                 ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,  // ✅ 上下分散排列
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // 顶部内容
                     Column(
                       children: [
                         const SizedBox(height: 40),
                         _buildUserCard(isSmallScreen),
-                        const SizedBox(height: 20),      // 调整间距
-                        _buildDivider(isSmallScreen),    // ✅ 新增分割条
-                        const SizedBox(height: 20),      // 调整间距
+                        const SizedBox(height: 20),
+                        _buildDivider(isSmallScreen),
+                        const SizedBox(height: 20),
                         _buildCloudButtons(isSmallScreen),
-
                       ],
                     ),
-                    // 底部导航
                     _buildBottomNavigation(isSmallScreen),
                   ],
                 ),
@@ -157,9 +146,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ============================================================
-  // 1. 顶部用户卡片
-  // ============================================================
   Widget _buildUserCard(bool isSmallScreen) {
     const baseWidth = 1340.0;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -201,7 +187,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildDivider(bool isSmallScreen) {
     return Center(
-      child:Container(
+      child: Container(
         width: isSmallScreen ? 400.0 : 1600.0,
         height: 10.0,
         decoration: BoxDecoration(
@@ -212,9 +198,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ============================================================
-  // 2. 用户信息入口
-  // ============================================================
   Widget _buildUserInfoEntry({
     required double cardWidth,
     required double cardHeight,
@@ -298,9 +281,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-// ============================================================
-// 3. 设置按钮
-// ============================================================
+
   Widget _buildSettingsButton({required double avatarSize}) {
     return GestureDetector(
       onTapDown: (_) => setState(() => _settingsScale = 0.92),
@@ -340,10 +321,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
-  // ============================================================
-  // 5. 云朵互动按钮
-  // ============================================================
   Widget _buildCloudButtons(bool isSmallScreen) {
     const baseWidth = 1340.0;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -353,21 +330,18 @@ class _HomePageState extends State<HomePage> {
     final buttonHeight = 140.0 * scaleFactor;
     final fontSize = 36.0 * scaleFactor;
 
-    // ✅ 所有 y 值在 0.0~1.0 之间，保证点击正常
     final interactions = [
-      {'label': '干杯', 'image': 'assets/images/button_cloud.png', 'x': 0.05, 'y': 0.20},
-      {'label': '抱抱', 'image': 'assets/images/button_cloud.png', 'x': 0.30, 'y': 0.80},
-      {'label': '贴贴', 'image': 'assets/images/button_cloud.png', 'x': 0.60, 'y': 0.50},
+      {'label': ' 干杯 ', 'image': 'assets/images/button_cloud.png', 'x': 0.05, 'y': 0.20},
+      {'label': ' 抱抱 ', 'image': 'assets/images/button_cloud.png', 'x': 0.30, 'y': 0.80},
+      {'label': ' 贴贴 ', 'image': 'assets/images/button_cloud.png', 'x': 0.60, 'y': 0.50},
     ];
 
     const double areaSize = 580;
-
     return SizedBox(
       height: areaSize,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // 云朵按钮
           ...interactions.map((item) {
             return Positioned(
               left: (item['x'] as double) * areaSize,
@@ -381,7 +355,6 @@ class _HomePageState extends State<HomePage> {
               ),
             );
           }).toList(),
-          // ✅ 切换虚拟形象按钮（抱抱正下方居中）
           Positioned(
             left: 0.34 * areaSize,
             top: 0.94 * areaSize,
@@ -392,12 +365,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-// ============================================================
-// 切换虚拟形象按钮（毛玻璃 + 动效）
-// ============================================================
   Widget _buildSwitchAvatarButton(bool isSmallScreen) {
     final buttonSize = isSmallScreen ? 40.0 : 56.0;
-
     return GestureDetector(
       onTapDown: (_) => setState(() => _avatarSwitchScale = 0.85),
       onTapUp: (_) => setState(() => _avatarSwitchScale = 1.0),
@@ -406,7 +375,7 @@ class _HomePageState extends State<HomePage> {
         _onTapWithHaptic(() {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('🔄 切换虚拟形象'),
+              content: Text('🔄 切换虚拟形象 '),
               duration: Duration(seconds: 1),
             ),
           );
@@ -444,11 +413,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
-
-  // ============================================================
-  // 7. 聊天入口按钮
-  // ============================================================
   Widget _buildChatEntry(bool isSmallScreen) {
     const baseWidth = 1340.0;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -457,7 +421,6 @@ class _HomePageState extends State<HomePage> {
     final entryHeight = 155.0 * scaleFactor;
     final entryX = 850.0 * scaleFactor;
     final entryY = 541.0 * scaleFactor;
-
     final entryWidth = 150.0 * scaleFactor;
     final scale = 1.2;
     final maxWidth = MediaQuery.of(context).size.width * 0.4;
@@ -473,7 +436,7 @@ class _HomePageState extends State<HomePage> {
         onTap: () {
           _onTapWithHaptic(() {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('💬 聊天功能开发中')),
+              const SnackBar(content: Text('💬 聊天功能开发中 ')),
             );
           });
         },
@@ -512,9 +475,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-  // ============================================================
-  // 8. 底部导航【已修改：增加日历跳转逻辑】
-  // ============================================================
+
   Widget _buildBottomNavigation(bool isSmallScreen) {
     final iconSize = isSmallScreen ? 32.0 : 48.0;
     final fontSize = isSmallScreen ? 12.0 : 14.0;
@@ -549,14 +510,25 @@ class _HomePageState extends State<HomePage> {
                     setState(() {
                       _selectedTab = index;
                     });
-
-                    if (index == 0) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CalendarPage(),
-                        ),
-                      );
+                    switch (index) {
+                      case 0:
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CalendarPage()),
+                        );
+                        break;
+                      case 1:
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => MessageBoardPage()),
+                        );
+                        break;
+                      case 2:
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("慢信开发中")));
+                        break;
+                      case 3:
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("共读开发中")));
+                        break;
                     }
                   });
                 },
@@ -592,12 +564,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
-
-
-  // ============================================================
-  // 通用：点击弹动反馈
-  // ============================================================
   void _onTapWithHaptic(VoidCallback action) {
     if (Theme.of(context).platform == TargetPlatform.iOS ||
         Theme.of(context).platform == TargetPlatform.android) {
@@ -607,9 +573,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// ============================================================
-// CloudButton 云朵按钮组件（独立于 HomePage）
-// ============================================================
 class CloudButton extends StatefulWidget {
   final String label;
   final String image;
@@ -630,8 +593,7 @@ class CloudButton extends StatefulWidget {
   State<CloudButton> createState() => _CloudButtonState();
 }
 
-class _CloudButtonState extends State<CloudButton>
-    with SingleTickerProviderStateMixin {
+class _CloudButtonState extends State<CloudButton> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
