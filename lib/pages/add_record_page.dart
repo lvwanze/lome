@@ -36,11 +36,9 @@ class _AddPlanPageState extends State<AddPlanPage> {
   @override
   void initState() {
     super.initState();
-    // 如果有已有数据，回显到输入框
     if (widget.existingPlan != null) {
       _titleController.text = widget.existingPlan?['title'] ?? '';
       _contentController.text = widget.existingPlan?['content'] ?? '';
-      // 图片回显需要从 URL 加载，这里暂不处理
     }
   }
 
@@ -117,8 +115,10 @@ class _AddPlanPageState extends State<AddPlanPage> {
     setState(() => _isSaving = true);
 
     try {
-      // TODO: 先上传图片获取 URL，再用 URL 保存规划
-      // 目前先保存文字，图片暂时不保存到后端
+      // ============ 1. 先上传图片 ============
+      final imageUrls = await _uploadImages();
+
+      // ============ 2. 保存规划（含图片URL） ============
       final isEdit = widget.existingPlan != null;
       final response = await ApiService.post(
         isEdit ? '/api/v1/plan/update' : '/api/v1/plan/create',
@@ -127,18 +127,26 @@ class _AddPlanPageState extends State<AddPlanPage> {
                 'planId': widget.existingPlan?['planId'],
                 'title': title,
                 'content': content,
-                'images': [],  // 暂不传图片
+                'images': imageUrls,
               }
             : {
                 'date': _formatDateKey(widget.selectedDate),
                 'title': title,
                 'content': content,
-                'images': [],  // 暂不传图片
+                'images': imageUrls,
               },
       );
 
       if (response['code'] == 0) {
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('保存成功 🎉'),
+              backgroundColor: Color(0xFF8AAA7A),
+              duration: Duration(seconds: 1),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
           Navigator.pop(context, true);
         }
       } else {
@@ -156,7 +164,7 @@ class _AddPlanPageState extends State<AddPlanPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('网络异常，请稍后再试'),
+            content: Text('保存失败: $e'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
           ),
@@ -169,6 +177,25 @@ class _AddPlanPageState extends State<AddPlanPage> {
     }
   }
 
+  // ============ 上传图片 ============
+  Future<List<String>> _uploadImages() async {
+  if (_imageBytes.isEmpty) return [];
+  List<String> urls = [];
+  for (var bytes in _imageBytes) {
+    try {
+      final response = await ApiService.uploadImage(
+        imageBytes: bytes,
+        folder: 'calendar/records',
+      );
+      if (response['code'] == 0) {
+        urls.add(response['data']['url']);
+      }
+    } catch (e) {
+      print('图片上传失败: $e');
+    }
+  }
+  return urls;
+}
   // ============ UI 构建 ============
   @override
   Widget build(BuildContext context) {

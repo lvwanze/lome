@@ -37,11 +37,9 @@ class _AddRecordPageState extends State<AddRecordPage> {
   @override
   void initState() {
     super.initState();
-    // 如果有已有数据，回显到输入框
     if (widget.existingRecord != null) {
       _titleController.text = widget.existingRecord?['title'] ?? '';
       _contentController.text = widget.existingRecord?['content'] ?? '';
-      // 图片回显需要从 URL 加载，这里暂不处理
     }
   }
 
@@ -118,8 +116,10 @@ class _AddRecordPageState extends State<AddRecordPage> {
     setState(() => _isSaving = true);
 
     try {
-      // TODO: 先上传图片获取 URL，再用 URL 保存记录
-      // 目前先保存文字，图片暂时不保存到后端
+      // ============ 1. 先上传图片 ============
+      final imageUrls = await _uploadImages();
+
+      // ============ 2. 保存记录（含图片URL） ============
       final isEdit = widget.existingRecord != null;
       final response = await ApiService.post(
         isEdit ? '/api/v1/record/update' : '/api/v1/record/create',
@@ -128,20 +128,28 @@ class _AddRecordPageState extends State<AddRecordPage> {
                 'recordId': widget.existingRecord?['recordId'],
                 'title': title,
                 'content': content,
-                'images': [],  // 暂不传图片
+                'images': imageUrls,
                 'mood': 'happy',
               }
             : {
                 'date': _formatDateKey(widget.selectedDate),
                 'title': title,
                 'content': content,
-                'images': [],  // 暂不传图片
+                'images': imageUrls,
                 'mood': 'happy',
               },
       );
 
       if (response['code'] == 0) {
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('保存成功 🎉'),
+              backgroundColor: Color(0xFF8AAA7A),
+              duration: Duration(seconds: 1),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
           Navigator.pop(context, true);
         }
       } else {
@@ -159,7 +167,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('网络异常，请稍后再试'),
+            content: Text('保存失败: $e'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
           ),
@@ -171,6 +179,26 @@ class _AddRecordPageState extends State<AddRecordPage> {
       }
     }
   }
+
+  // ============ 上传图片 ============
+  Future<List<String>> _uploadImages() async {
+  if (_imageBytes.isEmpty) return [];
+  List<String> urls = [];
+  for (var bytes in _imageBytes) {
+    try {
+      final response = await ApiService.uploadImage(
+        imageBytes: bytes,
+        folder: 'calendar/plans',
+      );
+      if (response['code'] == 0) {
+        urls.add(response['data']['url']);
+      }
+    } catch (e) {
+      print('图片上传失败: $e');
+    }
+  }
+  return urls;
+}
 
   // ============ UI 构建 ============
   @override

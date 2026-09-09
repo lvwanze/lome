@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static const String baseUrl = 'https://love-app1-0g8yva6l11e713ef-1418513210.ap-shanghai.app.tcloudbase.com';
 
+  // ============ GET 请求 ============
   static Future<Map<String, dynamic>> get(
     String path, {
     Map<String, String>? query,
@@ -18,6 +20,7 @@ class ApiService {
     return _handleResponse(response);
   }
 
+  // ============ POST 请求 ============
   static Future<Map<String, dynamic>> post(
     String path, {
     Map<String, dynamic>? body,
@@ -45,6 +48,7 @@ class ApiService {
     }
   }
 
+  // ============ PUT 请求 ============
   static Future<Map<String, dynamic>> put(
     String path, {
     Map<String, dynamic>? body,
@@ -71,16 +75,54 @@ class ApiService {
     }
   }
 
+  // ============ 图片上传 ============
+  static Future<Map<String, dynamic>> uploadImage({
+    required Uint8List imageBytes,
+    required String folder,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/v1/upload/image');
+      final headers = await _buildHeaders();
+
+      print('【图片上传】URL: $uri');
+      print('【图片上传】Folder: $folder');
+
+      final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll(headers);
+      request.fields['folder'] = folder;
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          imageBytes,
+          filename: '${DateTime.now().millisecondsSinceEpoch}.jpg',
+        ),
+      );
+
+      final response = await request.send().timeout(const Duration(seconds: 30));
+      final responseBody = await response.stream.bytesToString();
+
+      print('【图片上传】状态码: ${response.statusCode}');
+      print('【图片上传】响应: $responseBody');
+
+      return jsonDecode(responseBody);
+    } catch (e) {
+      print('【图片上传异常】$e');
+      rethrow;
+    }
+  }
+
+  // ============ 构建请求头 ============
   static Future<Map<String, String>> _buildHeaders() async {
     // ============ 临时硬编码 Token（联调完成后删除） ============
     const testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIzMDExNTQ2YzZhM2UyMmU5MDAwYTMwYzY1MWQ5YjM2NiIsImlhdCI6MTc4Njk2NzIyNSwiZXhwIjoxNzg3NTcyMDI1fQ.UMPrC2aggMNjPbwzwuQUEO2HQ4cWVqAR04nBkYEVlvQ';
-    print('【硬编码Token】$testToken'); 
+    print('【硬编码Token】$testToken');
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $testToken',
     };
   }
 
+  // ============ 处理响应 ============
   static Map<String, dynamic> _handleResponse(http.Response response) {
     print('【API响应】状态码: ${response.statusCode}');
     print('【API响应】内容: ${response.body}');
