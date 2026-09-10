@@ -4,9 +4,6 @@ import 'package:lome/models/message_model.dart';
 import 'package:lome/pages/message_detail_page.dart';
 import 'package:lome/pages/message_editor_page.dart';
 
-// ============================================================
-// 留言板列表主页
-// ============================================================
 class MessageBoardPage extends StatefulWidget {
   const MessageBoardPage({super.key});
 
@@ -105,7 +102,6 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
     });
   }
 
-  // ===== 返回按钮 =====
   Widget _buildBackButton(VoidCallback onTap) {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
@@ -139,7 +135,6 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
     );
   }
 
-  // ===== 顶部栏 =====
   Widget _buildTopBar() {
     return Stack(
       alignment: Alignment.center,
@@ -193,7 +188,6 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
     );
   }
 
-  // ===== Tab切换栏 =====
   Widget _buildTabBar() {
     return Center(
       child: Container(
@@ -238,7 +232,6 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
     );
   }
 
-  // ===== 留言列表 =====
   Widget _buildMessageList() {
     if (_isLoading && _messages.isEmpty) {
       return const Center(
@@ -279,7 +272,6 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
     );
   }
 
-  // ===== 空状态 =====
   Widget _buildEmptyState() {
     final isMine = _currentTab == 'mine';
     return Center(
@@ -301,9 +293,13 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
     );
   }
 
-  // ===== 单条留言卡片 =====
+  // ============ 留言卡片 ============
+  // 逻辑：
+  // - "我的留言" Tab → 直接显示内容
+  // - "Ta的留言" Tab → 未读时密封，已读时显示摘要
   Widget _buildMessageCard(Message message) {
     final isPartnerTab = _currentTab == 'partner';
+    final isSealed = isPartnerTab && !message.isRead;
 
     return GestureDetector(
       onTap: () => _navigateToDetail(message),
@@ -323,6 +319,7 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ===== 头部 =====
             Row(
               children: [
                 Container(
@@ -377,90 +374,122 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    Icon(
-                      message.isRead ? Icons.check_circle : Icons.circle,
-                      size: 16,
-                      color: message.isRead
-                          ? const Color(0xFF8AAA7A)
-                          : const Color(0xFFD4C8C0),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      message.isRead ? "已读" : "未读",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: message.isRead
-                            ? const Color(0xFF8AAA7A)
-                            : const Color(0xFFD4C8C0),
-                      ),
-                    ),
-                  ],
-                ),
+                // 密封/已拆图标（只在"Ta的留言"里显示）
+                if (isPartnerTab)
+                  Icon(
+                    isSealed ? Icons.mail : Icons.drafts,
+                    size: 28,
+                    color: isSealed
+                        ? const Color(0xFFE8A87C)
+                        : const Color(0xFFD4C8C0),
+                  ),
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              message.content,
-              style: const TextStyle(fontSize: 16, color: Color(0xFF776B65)),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (message.images.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: message.images.map((img) {
-                  return Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8E2DD),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.image, color: Color(0xFFB8A8A2)),
-                  );
-                }).toList(),
-              ),
-            ],
-            if (message.emotionTag != null && message.emotionTag!.isNotEmpty) ...[
-              const SizedBox(height: 8),
+
+            // ===== 内容 =====
+            if (isSealed) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  message.emotionTag!,
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF94847D)),
-                ),
-              ),
-            ],
-            if (message.hasReply && message.replyContent != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFE8E2DD),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.reply, size: 14, color: Color(0xFF94847D)),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        message.replyContent!,
-                        style: const TextStyle(fontSize: 14, color: Color(0xFF94847D)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    const Icon(
+                      Icons.lock_outline,
+                      size: 18,
+                      color: Color(0xFFB8A8A2),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      "点击拆开留言",
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF94847D),
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
+                    const Spacer(),
+                    if (message.images.isNotEmpty)
+                      const Icon(
+                        Icons.photo_library_outlined,
+                        size: 16,
+                        color: Color(0xFFB8A8A2),
+                      ),
                   ],
                 ),
               ),
+            ] else ...[
+              // 显示内容摘要
+              Text(
+                message.content.length > 30
+                    ? '${message.content.substring(0, 30)}...'
+                    : message.content,
+                style: const TextStyle(fontSize: 16, color: Color(0xFF776B65)),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (message.images.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: message.images.map((img) {
+                    return Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8E2DD),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.image, color: Color(0xFFB8A8A2)),
+                    );
+                  }).toList(),
+                ),
+              ],
+              if (message.emotionTag != null && message.emotionTag!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    message.emotionTag!,
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF94847D)),
+                  ),
+                ),
+              ],
+              if (message.hasReply && message.replyContent != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.reply, size: 14, color: Color(0xFF94847D)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          message.replyContent!,
+                          style: const TextStyle(fontSize: 14, color: Color(0xFF94847D)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ],
         ),
@@ -484,7 +513,7 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/images/message_board_page.png"),
+            image: AssetImage("assets/images/summer_wallpaper_mobile.JPG"),
             fit: BoxFit.cover,
           ),
         ),

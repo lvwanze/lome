@@ -714,17 +714,19 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   // ============ 第二块：日期网格 ============
-  Widget _buildDateGrid() {
+Widget _buildDateGrid() {
   final daysInMonth = _getDaysInMonth(_currentMonth);
   final firstDayOfMonth = _getFirstDayOfMonth(_currentMonth);
   final firstDayIndex = (firstDayOfMonth % 7) + 1;
 
   List<Widget> cells = [];
 
+  // 填充空白格子
   for (int i = 0; i < firstDayIndex; i++) {
-    cells.add(const SizedBox(width: 40));
+    cells.add(const Expanded(child: SizedBox()));
   }
 
+  // 填充日期格子
   for (int day = 1; day <= daysInMonth; day++) {
     final date = DateTime(_currentMonth.year, _currentMonth.month, day);
     final isSelected = _selectedDate.year == date.year &&
@@ -732,7 +734,6 @@ class _CalendarPageState extends State<CalendarPage> {
         _selectedDate.day == date.day;
     final dayData = _getDayData(date);
 
-    // 和记录/规划一样，直接从 dayData 读取
     final hasRecord = dayData?.hasRecord ?? false;
     final hasPlan = dayData?.hasPlan ?? false;
     final hasImportant = dayData?.hasImportantDay ?? false;
@@ -747,13 +748,12 @@ class _CalendarPageState extends State<CalendarPage> {
     }
 
     cells.add(
-      SizedBox(
-        width: 40,
+      Expanded(
         child: GestureDetector(
           onTap: () => _selectDate(date),
           child: Container(
-            margin: const EdgeInsets.all(2),
             height: 40,
+            margin: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               color: isSelected
                   ? const Color(0xFFE8D9D9).withOpacity(0.8)
@@ -780,15 +780,29 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
+  // 补全最后一行
   final remaining = (7 - (cells.length % 7)) % 7;
   for (int i = 0; i < remaining; i++) {
-    cells.add(const SizedBox(width: 40));
+    cells.add(const Expanded(child: SizedBox()));
   }
 
-  return Wrap(
-    children: cells,
+  // 按行构建
+  List<Widget> rows = [];
+  for (int i = 0; i < cells.length; i += 7) {
+    rows.add(
+      Row(
+        children: cells.sublist(i, i + 7 > cells.length ? cells.length : i + 7),
+      ),
+    );
+  }
+
+  return Column(
+    children: rows,
   );
 }
+
+
+
 
   // ============ 第三块：统计信息 ============
   Widget _buildStats() {

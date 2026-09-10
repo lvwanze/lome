@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lome/pages/Profile_Page.dart';
 import 'package:lome/pages/settings_page.dart';
 import 'package:lome/pages/calendar_home_page.dart';
-
+import 'package:lome/pages/message_board_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -550,14 +550,37 @@ class _HomePageState extends State<HomePage> {
                       _selectedTab = index;
                     });
 
-                    if (index == 0) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CalendarPage(),
-                        ),
-                      );
-                    }
+                   switch (index) {
+  case 0:
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CalendarPage(),
+      ),
+    );
+    break;
+  case 1:
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const MessageBoardPage(),
+      ),
+    );
+    break;
+  case 2:
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('慢信开发中')),
+    );
+    break;
+  case 3:
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('共读开发中')),
+    );
+    break;
+}
+
+
+
                   });
                 },
                 child: AnimatedScale(

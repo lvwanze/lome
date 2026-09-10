@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:lome/utils/app_constants.dart';
 
 class ApiService {
   static const String baseUrl = 'https://love-app1-0g8yva6l11e713ef-1418513210.ap-shanghai.app.tcloudbase.com';
@@ -113,13 +114,16 @@ class ApiService {
 
   // ============ 构建请求头 ============
   static Future<Map<String, String>> _buildHeaders() async {
-    // ============ 临时硬编码 Token（联调完成后删除） ============
-    const testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIzMDExNTQ2YzZhM2UyMmU5MDAwYTMwYzY1MWQ5YjM2NiIsImlhdCI6MTc4Njk2NzIyNSwiZXhwIjoxNzg3NTcyMDI1fQ.UMPrC2aggMNjPbwzwuQUEO2HQ4cWVqAR04nBkYEVlvQ';
-    print('【硬编码Token】$testToken');
-    return {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.tokenKey);  // 用常量，值为 'lome_token'
+    print('【Token】$token');
+    final headers = {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $testToken',
     };
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
   }
 
   // ============ 处理响应 ============

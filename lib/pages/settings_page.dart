@@ -116,7 +116,7 @@ class _SettingsPageState extends State<SettingsPage> {
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/images/summer wallpaper-mobile.JPG"),
+            image: AssetImage("assets/images/summer_wallpaper_mobile.JPG"),
             fit: BoxFit.cover,
           ),
         ),

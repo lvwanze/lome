@@ -24,19 +24,10 @@ class _NewMessagePageState extends State<NewMessagePage> {
   void initState() {
     super.initState();
 
-    // 如果有已有数据，回显到输入框（编辑模式）
     if (widget.existingMessage != null) {
       _textController.text = widget.existingMessage?['content'] ?? '';
       _charCount = _textController.text.length;
       _selectedEmotionTag = widget.existingMessage?['emotionTag'];
-
-      // 图片回显（如果是编辑，从URL加载）
-      // 由于图片是网络图片，这里暂不处理本地预览
-      final images = widget.existingMessage?['images'] ?? [];
-      if (images.isNotEmpty) {
-        // TODO: 从URL加载图片到预览
-        print('【编辑模式】已有${images.length}张图片');
-      }
     }
 
     _textController.addListener(() {
@@ -52,7 +43,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
     super.dispose();
   }
 
-  // ============ 图片选择 ============
   Future<void> _pickImage() async {
     if (_imageBytes.length >= _maxImages) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -106,7 +96,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
     );
   }
 
-  // ============ 上传图片 ============
   Future<List<String>> _uploadImages() async {
     if (_imageBytes.isEmpty) return [];
 
@@ -130,7 +119,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
     return urls;
   }
 
-  // ============ 发布/编辑留言 ============
   Future<void> _publishMessage() async {
     final content = _textController.text.trim();
 
@@ -148,15 +136,12 @@ class _NewMessagePageState extends State<NewMessagePage> {
     setState(() => _isSending = true);
 
     try {
-      // 1. 先上传图片
       final imageUrls = await _uploadImages();
 
-      // 2. 判断是编辑还是新建
       final isEdit = widget.existingMessage != null;
       dynamic response;
 
       if (isEdit) {
-        // 编辑留言
         response = await MessageService.update(
           messageId: widget.existingMessage?['id'] ?? widget.existingMessage?['_id'] ?? '',
           content: content,
@@ -164,7 +149,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
           emotionTag: _selectedEmotionTag,
         );
       } else {
-        // 新建留言
         response = await MessageService.create(
           content: content,
           images: imageUrls,
@@ -212,7 +196,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
     }
   }
 
-  // ============ 构建情绪标签 ============
   Widget _buildEmotionChip(String label, IconData icon) {
     final isSelected = _selectedEmotionTag == label;
     return GestureDetector(
@@ -252,7 +235,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
     );
   }
 
-  // ============ 构建图片列表 ============
   Widget _buildImageList() {
     List<Widget> items = [];
 
@@ -343,7 +325,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
     );
   }
 
-  // ===== 放弃确认弹窗 =====
   void _showDiscardDialog() {
     showDialog(
       context: context,
@@ -387,7 +368,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
     );
   }
 
-  // ============ UI 构建 ============
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.existingMessage != null;
@@ -397,7 +377,7 @@ class _NewMessagePageState extends State<NewMessagePage> {
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/images/message_board_page.png"),
+            image: AssetImage("assets/images/summer_wallpaper_mobile.JPG"),
             fit: BoxFit.cover,
           ),
         ),
@@ -407,7 +387,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ===== 顶部栏 =====
                 SizedBox(
                   height: 56,
                   child: Row(
@@ -471,7 +450,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
-                        // ===== 输入框 =====
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
@@ -505,7 +483,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        // ===== 添加图片 + 情绪标签按钮行 =====
                         Row(
                           children: [
                             Expanded(
@@ -549,7 +526,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        // ===== 已选图片 =====
                         if (_imageBytes.isNotEmpty) ...[
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -564,7 +540,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
                           _buildImageList(),
                           const SizedBox(height: 24),
                         ],
-                        // ===== 情绪标签 =====
                         const Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
@@ -588,7 +563,6 @@ class _NewMessagePageState extends State<NewMessagePage> {
                           ],
                         ),
                         const SizedBox(height: 40),
-                        // ===== 草稿提示 =====
                         const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
