@@ -5,6 +5,12 @@ const app = cloudbase.init({ env: process.env.ENV_ID });
 const db = app.database();
 const usersCollection = db.collection('users');
 
+// 兼容不同 SDK 版本的 doc().get() 返回结构（对象或数组）
+function firstDoc(res) {
+  if (!res || !res.data) return null;
+  return Array.isArray(res.data) ? res.data[0] : res.data;
+}
+
 exports.main = async (event, context) => {
   const token = event.headers?.authorization?.replace('Bearer ', '') || event.token;
 
@@ -17,7 +23,7 @@ exports.main = async (event, context) => {
     const userId = decoded.userId;
 
     const userQuery = await usersCollection.doc(userId).get();
-    const user = userQuery.data;
+    const user = firstDoc(userQuery);
 
     if (!user) {
       return { code: 4002, message: "用户不存在" };

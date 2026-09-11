@@ -4,6 +4,12 @@ const jwt = require('jsonwebtoken');
 const app = cloudbase.init({ env: process.env.ENV_ID });
 const db = app.database();
 
+// 兼容不同 SDK 版本的 doc().get() 返回结构（对象或数组）
+function firstDoc(res) {
+  if (!res || !res.data) return null;
+  return Array.isArray(res.data) ? res.data[0] : res.data;
+}
+
 function generateBindCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
@@ -26,7 +32,7 @@ exports.main = async (event, context) => {
 
     // 检查用户是否已绑定
     const userQuery = await db.collection('users').doc(userId).get();
-    const user = userQuery.data;
+    const user = firstDoc(userQuery);
 
     if (!user) {
       return { code: 4002, message: "用户不存在" };
