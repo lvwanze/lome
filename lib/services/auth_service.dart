@@ -307,12 +307,12 @@ class AuthService {
       // 400x: Token相关
       case 4001:
         return '登录已过期，请重新登录';
-      // 500x: 绑定码生成
+      // 500x: 绑定码（生成与使用共用 5001，服务端文案不同，优先用服务端返回的）
       case 5001:
-        return '您已绑定伴侣，不能重复生成';
-      // 600x: 绑定码使用
+        return defaultMessage.isNotEmpty ? defaultMessage : '您已绑定伴侣';
+      // 600x: 绑定码使用（6001 同时用于"未提供绑定码"和"绑定码不存在"）
       case 6001:
-        return '绑定码不存在，请检查是否输入正确';
+        return defaultMessage.isNotEmpty ? defaultMessage : '绑定码不存在，请检查是否输入正确';
       case 6002:
         return '绑定码已过期，请让对方重新生成';
       case 6003:
