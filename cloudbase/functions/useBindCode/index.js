@@ -6,8 +6,24 @@ const db = app.database();
 const usersCollection = db.collection('users');
 const bindCodesCollection = db.collection('bindCodes');
 
+// 兼容不同 SDK 版本的 doc().get() 返回结构（对象或数组）
+function firstDoc(res) {
+  if (!res || !res.data) return null;
+  return Array.isArray(res.data) ? res.data[0] : res.data;
+}
+
 exports.main = async (event, context) => {
-  const { bindCode } = event;
+  // 兼容 HTTP 网关（参数在 body 的 JSON 字符串里）与直接调用（参数在 event 根上）
+  let bindCode = event.bindCode;
+  if (!bindCode && event.body) {
+    try {
+      const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+      bindCode = body.bindCode;
+    } catch (e) {
+      console.error('解析 body 失败:', e);
+    }
+  }
+
   const token = event.headers?.authorization?.replace('Bearer ', '') || event.token;
 
   if (!token) {
@@ -24,7 +40,7 @@ exports.main = async (event, context) => {
 
     // 检查当前用户是否已绑定
     const currentUserQuery = await usersCollection.doc(userId).get();
-    const currentUser = currentUserQuery.data;
+    const currentUser = firstDoc(currentUserQuery);
 
     if (!currentUser) {
       return { code: 4002, message: "用户不存在" };
@@ -56,7 +72,7 @@ exports.main = async (event, context) => {
 
     // 检查对方是否已绑定
     const partnerQuery = await usersCollection.doc(codeData.userId).get();
-    const partner = partnerQuery.data;
+    const partner = firstDoc(partnerQuery);
 
     if (!partner) {
       return { code: 4002, message: "对方用户不存在" };
