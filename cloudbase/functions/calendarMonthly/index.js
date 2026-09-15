@@ -1,5 +1,5 @@
 // 获取月历概览 GET /api/v1/calendar/monthly
-const { db, _, getParams, getAuthUser, inCoupleScope } = require('./common');
+const { db, _, getParams, getAuthUser, inCoupleScope, authorScope } = require('./common');
 
 // 校验 month 格式 YYYY-MM
 function parseMonth(month) {
@@ -12,7 +12,7 @@ function parseMonth(month) {
 exports.main = async (event) => {
   const params = getParams(event);
 
-  const { userId, error } = await getAuthUser(event);
+  const { userId, partnerId, error } = await getAuthUser(event);
   if (error) return error;
 
   const parsed = parseMonth(params.month);
@@ -28,22 +28,20 @@ exports.main = async (event) => {
   const endDate = `${month}-${String(daysInMonth).padStart(2, '0')}`;
 
   try {
+    // 可见性条件下推到数据库：authorId 属于「我」或「我当前的伴侣」
+    const scope = authorScope(userId, partnerId);
+    const inMonth = _.gte(startDate).and(_.lte(endDate));
+
     const [recordsRes, plansRes, importantRes] = await Promise.all([
-      db.collection('records')
-        .where({ date: _.gte(startDate).and(_.lte(endDate)) })
-        .limit(1000)
-        .get(),
-      db.collection('plans')
-        .where({ date: _.gte(startDate).and(_.lte(endDate)) })
-        .limit(1000)
-        .get(),
-      db.collection('important_days').limit(1000).get(),
+      db.collection('records').where({ date: inMonth, authorId: scope }).limit(1000).get(),
+      db.collection('plans').where({ date: inMonth, authorId: scope }).limit(1000).get(),
+      db.collection('important_days').where({ date: inMonth, authorId: scope }).limit(1000).get(),
     ]);
 
-    // 只保留自己或伴侣创建的共享数据
-    const records = recordsRes.data.filter((d) => inCoupleScope(d, userId));
-    const plans = plansRes.data.filter((d) => inCoupleScope(d, userId));
-    const importantDays = importantRes.data.filter((d) => inCoupleScope(d, userId));
+    // 纵深防御：只保留自己或伴侣创建的共享数据
+    const records = recordsRes.data.filter((d) => inCoupleScope(d, userId, partnerId));
+    const plans = plansRes.data.filter((d) => inCoupleScope(d, userId, partnerId));
+    const importantDays = importantRes.data.filter((d) => inCoupleScope(d, userId, partnerId));
 
     const days = [];
     for (let d = 1; d <= daysInMonth; d++) {

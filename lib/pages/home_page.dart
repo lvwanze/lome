@@ -226,17 +226,22 @@ class _HomePageState extends State<HomePage> {
       onTapUp: (_) => setState(() => _infoEntryScale = 1.0),
       onTapCancel: () => setState(() => _infoEntryScale = 1.0),
       onTap: () {
-        _onTapWithHaptic(() {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ProfilePage(
-                isBound: _user?.isBound ?? false,
-              ),
-            ),
-          );
-        });
-      },
+  _onTapWithHaptic(() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfilePage(
+          isBound: _user?.isBound ?? false,
+        ),
+      ),
+    ).then((result) {
+      // 如果个人信息页返回 true（解绑成功），刷新首页用户信息
+      if (result == true) {
+        _loadUserData();
+      }
+    });
+  });
+},
       child: AnimatedScale(
         duration: const Duration(milliseconds: 150),
         curve: Curves.elasticOut,

@@ -30,15 +30,14 @@ class ApiService {
     final headers = await _buildHeaders();
 
     print('【POST请求】URL: $url');
-    print('【POST请求】Headers: $headers');
-    print('【POST请求】Body: $body');
+    print('【POST请求】Body 长度: ${body != null ? jsonEncode(body).length : 0}');
 
     try {
       final response = await http.post(
         url,
         headers: headers,
         body: body != null ? jsonEncode(body) : null,
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 30));
 
       print('【POST响应】状态码: ${response.statusCode}');
       print('【POST响应】内容: ${response.body}');
@@ -76,36 +75,39 @@ class ApiService {
     }
   }
 
-  // ============ 图片上传 ============
+  // ============ 图片上传上限 ============
+  // 必须与服务端 uploadImage 的 MAX_SIZE 保持一致。
+  // 网关对「文本类型」请求体限制 100KB，所以这里绝不能再用 JSON + base64：
+  // base64 膨胀 33%，原图超过约 72KB 就会被网关以 EXCEED_MAX_PAYLOAD_SIZE 拒绝。
+  // 改成原始二进制 body 后走「其他类型」档，实测服务端上限 4MB。
+  static const int maxUploadBytes = 4 * 1024 * 1024;
+
+  // ============ 图片上传（原始二进制方式） ============
+  //
+  // 返回 { fileId, url }。**入库请存 fileId**：url 是临时链接、会过期，
+  // 读取时由 calendarDaily / messageList 等重新换取。
   static Future<Map<String, dynamic>> uploadImage({
     required Uint8List imageBytes,
     required String folder,
+    String fileName = 'image.jpg',
+    String mimeType = 'image/jpeg',
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/v1/upload/image');
-      final headers = await _buildHeaders();
-
-      print('【图片上传】URL: $uri');
-      print('【图片上传】Folder: $folder');
-
-      final request = http.MultipartRequest('POST', uri);
-      request.headers.addAll(headers);
-      request.fields['folder'] = folder;
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'file',
-          imageBytes,
-          filename: '${DateTime.now().millisecondsSinceEpoch}.jpg',
-        ),
+      final uri = Uri.parse('$baseUrl/api/v1/upload/image').replace(
+        queryParameters: {'folder': folder, 'fileName': fileName},
       );
+      final headers = await _buildHeaders();
+      headers['Content-Type'] = mimeType; // 关键：不能是 application/json
 
-      final response = await request.send().timeout(const Duration(seconds: 30));
-      final responseBody = await response.stream.bytesToString();
+      print('【图片上传】folder: $folder');
+      print('【图片上传】图片大小: ${imageBytes.length ~/ 1024} KB');
+
+      final response = await http
+          .post(uri, headers: headers, body: imageBytes) // Uint8List → 原始字节
+          .timeout(const Duration(seconds: 60));
 
       print('【图片上传】状态码: ${response.statusCode}');
-      print('【图片上传】响应: $responseBody');
-
-      return jsonDecode(responseBody);
+      return _handleResponse(response);
     } catch (e) {
       print('【图片上传异常】$e');
       rethrow;
@@ -115,7 +117,7 @@ class ApiService {
   // ============ 构建请求头 ============
   static Future<Map<String, String>> _buildHeaders() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(AppConstants.tokenKey);  // 用常量，值为 'lome_token'
+    final token = prefs.getString(AppConstants.tokenKey);
     print('【Token】$token');
     final headers = {
       'Content-Type': 'application/json',

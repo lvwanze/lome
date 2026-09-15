@@ -4,7 +4,7 @@ const { db, getParams, getAuthUser, firstDoc, inCoupleScope } = require('./commo
 exports.main = async (event) => {
   const params = getParams(event);
 
-  const { userId, error } = await getAuthUser(event);
+  const { userId, partnerId, error } = await getAuthUser(event);
   if (error) return error;
 
   const { planId, completed } = params;
@@ -21,7 +21,7 @@ exports.main = async (event) => {
     if (!plan) {
       return { code: 404, message: '规划不存在', data: null };
     }
-    if (!inCoupleScope(plan, userId)) {
+    if (!inCoupleScope(plan, userId, partnerId)) {
       return { code: 403, message: '无权操作该规划', data: null };
     }
 

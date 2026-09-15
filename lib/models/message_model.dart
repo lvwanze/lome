@@ -50,7 +50,6 @@ class Message {
     );
   }
 
-  // ✅ toJson 放在类里面
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -69,5 +68,40 @@ class Message {
       'replyAuthorId': replyAuthorId,
       'replyAuthorName': replyAuthorName,
     };
+  }
+
+  // ✅ 新增：copyWith 方法，用于局部更新
+  Message copyWith({
+    String? id,
+    String? authorId,
+    String? authorName,
+    String? authorAvatar,
+    String? content,
+    List<String>? images,
+    String? emotionTag,
+    bool? isRead,
+    int? createTime,
+    bool? hasReply,
+    String? replyId,
+    String? replyContent,
+    String? replyAuthorId,
+    String? replyAuthorName,
+  }) {
+    return Message(
+      id: id ?? this.id,
+      authorId: authorId ?? this.authorId,
+      authorName: authorName ?? this.authorName,
+      authorAvatar: authorAvatar ?? this.authorAvatar,
+      content: content ?? this.content,
+      images: images ?? this.images,
+      emotionTag: emotionTag ?? this.emotionTag,
+      isRead: isRead ?? this.isRead,
+      createTime: createTime ?? this.createTime,
+      hasReply: hasReply ?? this.hasReply,
+      replyId: replyId ?? this.replyId,
+      replyContent: replyContent ?? this.replyContent,
+      replyAuthorId: replyAuthorId ?? this.replyAuthorId,
+      replyAuthorName: replyAuthorName ?? this.replyAuthorName,
+    );
   }
 }

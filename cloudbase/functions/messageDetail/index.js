@@ -1,10 +1,17 @@
 // 获取留言详情 GET /api/v1/messages/{id}
-const { db, getParams, getAuthUser, firstDoc, inCoupleScope } = require('./common');
+const {
+  db,
+  getParams,
+  getAuthUser,
+  firstDoc,
+  inCoupleScope,
+  fillImageUrls,
+} = require('./common');
 
 exports.main = async (event) => {
   const params = getParams(event);
 
-  const { userId, error } = await getAuthUser(event);
+  const { userId, partnerId, error } = await getAuthUser(event);
   if (error) return error;
 
   const messageId = params.messageId || params.id;
@@ -18,10 +25,13 @@ exports.main = async (event) => {
     if (!doc) {
       return { code: 4005, message: '留言不存在', data: null };
     }
-    // 仅关系双方可见
-    if (!inCoupleScope(doc, userId)) {
+    // 仅关系双方可见（用实时的 partnerId 判断，解绑后前任立即失去访问权）
+    if (!inCoupleScope(doc, userId, partnerId)) {
       return { code: 4006, message: '无权查看该留言', data: null };
     }
+
+    // 库里存的是 cloud:// fileID，出参前换成临时链接
+    await fillImageUrls([doc]);
 
     // 接收方查看详情时自动标记已读（单条兜底，批量已读由 messageRead 负责）
     if (doc.authorId !== userId && !doc.isRead) {

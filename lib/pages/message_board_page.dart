@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lome/services/message_service.dart';
+import 'package:lome/services/auth_service.dart';
 import 'package:lome/models/message_model.dart';
 import 'package:lome/pages/message_detail_page.dart';
 import 'package:lome/pages/message_editor_page.dart';
@@ -17,12 +18,29 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
   bool _hasMore = true;
   int? _nextCursor;
   String _currentTab = 'mine';
+  String _partnerName = 'Ta';
 
   @override
   void initState() {
     super.initState();
+    _loadPartnerName();
     _loadMessages();
     _markAllRead();
+  }
+
+  // ============ 获取伴侣昵称 ============
+  Future<void> _loadPartnerName() async {
+    try {
+      final user = await AuthService().getUserInfo();
+      if (mounted) {
+        setState(() {
+          _partnerName = user.partnerNickname ?? 'Ta';
+        });
+      }
+      print('【留言板】伴侣昵称: $_partnerName');
+    } catch (e) {
+      print('【留言板】获取伴侣昵称失败: $e');
+    }
   }
 
   // ============ 数据加载 ============
@@ -90,16 +108,51 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
       }
     });
   }
+  void _navigateToDetail(Message message) async {
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => MessageDetailPage(message: message)),
+  );
 
-  void _navigateToDetail(Message message) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => MessageDetailPage(message: message)),
-    ).then((result) {
-      if (result == true) {
-        _loadMessages(refresh: true);
+  if (result == true) {
+    setState(() {
+      final index = _messages.indexWhere((m) => m.id == message.id);
+      if (index != -1) {
+        _messages[index] = message.copyWith(isRead: true);
       }
     });
+  }
+}
+  // ============ 查看图片 ============
+  void _showImagePreview(String imageUrl) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          body: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (ctx, error, stack) {
+                    return const Icon(
+                      Icons.broken_image,
+                      size: 80,
+                      color: Colors.grey,
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildBackButton(VoidCallback onTap) {
@@ -201,7 +254,7 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
           children: [
             _buildTabItem("我的留言", "mine"),
             const SizedBox(width: 4),
-            _buildTabItem("Ta的留言", "partner"),
+            _buildTabItem("$_partnerName的留言", "partner"),
           ],
         ),
       ),
@@ -285,7 +338,7 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            isMine ? "你还没有留言，写下第一句话吧" : "Ta还没有留言",
+            isMine ? "你还没有留言，写下第一句话吧" : "$_partnerName 还没有留言",
             style: const TextStyle(fontSize: 18, color: Color(0xFFB8A8A2)),
           ),
         ],
@@ -294,9 +347,6 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
   }
 
   // ============ 留言卡片 ============
-  // 逻辑：
-  // - "我的留言" Tab → 直接显示内容
-  // - "Ta的留言" Tab → 未读时密封，已读时显示摘要
   Widget _buildMessageCard(Message message) {
     final isPartnerTab = _currentTab == 'partner';
     final isSealed = isPartnerTab && !message.isRead;
@@ -359,9 +409,9 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
                                 color: const Color(0xFFE8E2DD),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Text(
-                                "Ta",
-                                style: TextStyle(fontSize: 11, color: Color(0xFFB8A8A2)),
+                              child: Text(
+                                _partnerName,
+                                style: const TextStyle(fontSize: 11, color: Color(0xFFB8A8A2)),
                               ),
                             ),
                           ],
@@ -374,7 +424,6 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
                     ],
                   ),
                 ),
-                // 密封/已拆图标（只在"Ta的留言"里显示）
                 if (isPartnerTab)
                   Icon(
                     isSealed ? Icons.mail : Icons.drafts,
@@ -435,19 +484,53 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
+              // ===== 图片（真实图片 + 点击查看） =====
               if (message.images.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
+                  runSpacing: 8,
                   children: message.images.map((img) {
-                    return Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8E2DD),
+                    return GestureDetector(
+                      onTap: () => _showImagePreview(img),
+                      child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          img,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (ctx, error, stack) {
+                            return Container(
+                              width: 60,
+                              height: 60,
+                              color: const Color(0xFFE8E2DD),
+                              child: const Icon(
+                                Icons.broken_image,
+                                color: Color(0xFFB8A8A2),
+                              ),
+                            );
+                          },
+                          loadingBuilder: (ctx, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
+                              width: 60,
+                              height: 60,
+                              color: const Color(0xFFE8E2DD),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFFB8A8A2),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                      child: const Icon(Icons.image, color: Color(0xFFB8A8A2)),
                     );
                   }).toList(),
                 ),

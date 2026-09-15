@@ -1,17 +1,22 @@
 // 重要日列表 GET /api/v1/important-day/list
-const { db, getParams, getAuthUser, inCoupleScope } = require('./common');
+const { db, getParams, getAuthUser, inCoupleScope, authorScope } = require('./common');
 
 exports.main = async (event) => {
   const params = getParams(event);
 
-  const { userId, error } = await getAuthUser(event);
+  const { userId, partnerId, error } = await getAuthUser(event);
   if (error) return error;
 
   try {
-    const res = await db.collection('important_days').limit(1000).get();
+    // 可见性条件下推到数据库：authorId 属于「我」或「我当前的伴侣」
+    const res = await db
+      .collection('important_days')
+      .where({ authorId: authorScope(userId, partnerId) })
+      .limit(1000)
+      .get();
 
     const list = res.data
-      .filter((d) => inCoupleScope(d, userId))
+      .filter((d) => inCoupleScope(d, userId, partnerId))
       .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
       .map((d) => ({
         importantDayId: d._id,

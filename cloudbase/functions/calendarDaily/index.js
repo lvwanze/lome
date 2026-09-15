@@ -1,41 +1,18 @@
 // 获取日详情 GET /api/v1/calendar/daily
-const { app, db, getParams, getAuthUser, isValidDate, inCoupleScope } = require('./common');
-
-// 把记录里的图片 fileID 换成临时访问 URL（云存储为私有，前端无法直接用 fileID 渲染）
-async function fillImageUrls(records) {
-  const fileIds = [];
-  for (const r of records) {
-    for (const img of r.images || []) {
-      if (typeof img === 'string' && img.startsWith('cloud://')) fileIds.push(img);
-    }
-  }
-  if (!fileIds.length) return;
-
-  try {
-    const tmp = await app.getTempFileURL({ fileList: fileIds });
-    const urlMap = {};
-    for (const item of tmp.fileList || []) {
-      urlMap[item.fileID] = item.tempFileURL;
-    }
-    for (const r of records) {
-      r.images = (r.images || []).map((img) => ({
-        fileId: img,
-        url: urlMap[img] || null,
-      }));
-    }
-  } catch (e) {
-    console.warn('生成图片临时链接失败:', e.message);
-    // 失败时保留 fileID，前端可稍后重试
-    for (const r of records) {
-      r.images = (r.images || []).map((img) => ({ fileId: img, url: null }));
-    }
-  }
-}
+const {
+  db,
+  getParams,
+  getAuthUser,
+  isValidDate,
+  inCoupleScope,
+  authorScope,
+  fillImageUrls,
+} = require('./common');
 
 exports.main = async (event) => {
   const params = getParams(event);
 
-  const { userId, error } = await getAuthUser(event);
+  const { userId, partnerId, error } = await getAuthUser(event);
   if (error) return error;
 
   const { date } = params;
@@ -44,27 +21,32 @@ exports.main = async (event) => {
   }
 
   try {
+    // 可见性条件下推到数据库：authorId 属于「我」或「我当前的伴侣」。
+    // 不能只靠取回后再 filter —— 那样每次请求都会把别人的数据拉进函数内存。
+    const scope = authorScope(userId, partnerId);
+
     const [recordsRes, plansRes, importantRes] = await Promise.all([
       db.collection('records')
-        .where({ date })
+        .where({ date, authorId: scope })
         .orderBy('createTime', 'desc')
         .limit(1000)
         .get(),
       db.collection('plans')
-        .where({ date })
+        .where({ date, authorId: scope })
         .orderBy('createTime', 'asc')
         .limit(1000)
         .get(),
-      db.collection('important_days').limit(1000).get(),
+      db.collection('important_days').where({ date, authorId: scope }).limit(100).get(),
     ]);
 
-    const records = recordsRes.data.filter((d) => inCoupleScope(d, userId));
-    const plans = plansRes.data.filter((d) => inCoupleScope(d, userId));
-    const importantDay = importantRes.data.find(
-      (d) => d.date === date && inCoupleScope(d, userId)
-    );
+    // 纵深防御：数据库条件已保证，这里再按同一规则过滤一次
+    const records = recordsRes.data.filter((d) => inCoupleScope(d, userId, partnerId));
+    const plans = plansRes.data.filter((d) => inCoupleScope(d, userId, partnerId));
+    const importantDay = importantRes.data.find((d) => inCoupleScope(d, userId, partnerId));
 
+    // 记录和规划的图片都要换临时链接（早先漏了 plans）
     await fillImageUrls(records);
+    await fillImageUrls(plans);
 
     return {
       code: 0,

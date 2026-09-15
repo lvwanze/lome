@@ -56,14 +56,34 @@ class _NewMessagePageState extends State<NewMessagePage> {
     }
 
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
+    // 先压缩再上传：长边 1920、JPEG 质量 80，相册原图一般能压到 1MB 以内
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1920,
+      maxHeight: 1920,
+      imageQuality: 80,
+    );
+    if (image == null) return;
 
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      setState(() {
-        _imageBytes.add(bytes);
-      });
+    final bytes = await image.readAsBytes();
+    if (bytes.length > ApiService.maxUploadBytes) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '图片过大（${(bytes.length / 1024 / 1024).toStringAsFixed(1)}MB），'
+            '请选择小于 ${ApiService.maxUploadBytes ~/ 1024 ~/ 1024}MB 的图片',
+          ),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
     }
+
+    setState(() {
+      _imageBytes.add(bytes);
+    });
   }
 
   void _removeImage(int index) {
@@ -107,8 +127,10 @@ class _NewMessagePageState extends State<NewMessagePage> {
           folder: 'messages',
         );
         if (response['code'] == 0) {
-          urls.add(response['data']['url']);
-          print('图片上传成功: ${response['data']['url']}');
+          // 存 fileId 而不是 url：url 是临时链接、会过期，读取时由
+          // messageList / messageDetail 重新换取
+          urls.add(response['data']['fileId']);
+          print('图片上传成功: ${response['data']['fileId']}');
         } else {
           print('图片上传失败: ${response['message']}');
         }

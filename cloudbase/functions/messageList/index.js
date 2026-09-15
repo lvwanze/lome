@@ -1,5 +1,5 @@
 // 获取留言列表 GET /api/v1/messages?type=mine|partner&pageSize=20&cursor=xxx
-const { db, _, getParams, getAuthUser } = require('./common');
+const { db, _, getParams, getAuthUser, fillImageUrls } = require('./common');
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
@@ -70,6 +70,9 @@ exports.main = async (event) => {
         userMap[user._id] = { nickname: user.nickname || '', avatarUrl: user.avatarUrl || '' };
       }
     });
+
+    // 库里存的是 cloud:// fileID，出参前换成临时链接
+    await fillImageUrls(listRes.data || []);
 
     const list = (listRes.data || []).map((d) => buildItem(d, userMap));
     const hasMore = list.length === pageSize;

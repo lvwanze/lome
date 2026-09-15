@@ -4,6 +4,7 @@ import 'package:lome/services/api_service.dart';
 import 'package:lome/models/calendar_models.dart';
 import 'package:lome/pages/add_record_page.dart';
 import 'package:lome/pages/add_plan_page.dart';
+import 'package:lome/services/auth_service.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -48,17 +49,29 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   // ============ 数据加载 ============
-  Future<void> _loadUserData() async {
+
+Future<void> _loadUserData() async {
+  try {
+    final user = await AuthService().getUserInfo();
     final prefs = await SharedPreferences.getInstance();
+    
     setState(() {
-      _partnerName = prefs.getString('partner_name') ?? 'TA';
+      // 用真实伴侣昵称，没有就显示 'TA'
+      _partnerName = user.partnerNickname ?? 'TA';
+      
+      // 绑定日期从 SharedPreferences 读取（如果有的话）
       final bindDateStr = prefs.getString('bind_date');
       if (bindDateStr != null) {
         final bindDate = DateTime.parse(bindDateStr);
         _totalDays = DateTime.now().difference(bindDate).inDays + 1;
       }
     });
+    
+    print('【日历】伴侣昵称: $_partnerName, 第 $_totalDays 天');
+  } catch (e) {
+    print('【日历】加载用户信息失败: $e');
   }
+}
 
   Future<void> _fetchMonthlyData() async {
     setState(() => _isLoading = true);

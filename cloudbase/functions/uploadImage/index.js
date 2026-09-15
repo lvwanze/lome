@@ -1,15 +1,25 @@
 // 上传图片 POST /api/v1/upload/image
-// 入参：{ fileName?: string, fileContent: base64 字符串（可带 data:image/xxx;base64, 前缀）, folder?: 业务目录 }
-//   folder 可选值（按业务隔离，见任务文档 3.2）：
-//     calendar/records → 日历-记录图片
-//     calendar/plans   → 日历-规划图片
-//     messages         → 留言板图片
-//   不传 folder 时兼容旧行为：images/<userId>/
-// 返回：{ fileId, url }，url 为临时访问链接（过期后可通过 calendarDaily 重新换取）
+//
+// 【推荐入参】请求体直接是图片原始二进制，folder/fileName 放 query string：
+//   POST /api/v1/upload/image?folder=calendar/records&fileName=xxx.jpg
+//   Content-Type: image/jpeg
+//   Body: <二进制>
+// 【兼容入参】旧版 App 的 JSON base64：{ fileContent: 'data:image/jpeg;base64,...', folder }
+//
+// 为什么要改成二进制：网关对「文本类型」请求体限制 100KB，base64 再膨胀 33%，
+// 原图只要超过约 72KB 就会被网关直接拒绝、根本进不到函数里
+// （错误码 EXCEED_MAX_PAYLOAD_SIZE）。改用 image/* 后走「其他类型」档，
+// 实测上限（2026-09-15）：
+//   · 原始 body ≤ 4.5MB  网关放行
+//   · 原始 body ≥ 5MB    网关返回 EXCEED_MAX_PAYLOAD_SIZE（6MB 事件上限 ÷ 1.33 base64 税）
+//   · 4.3MB 以上偶发 FUNCTIONS_MEMORY_LIMIT_EXCEEDED，故业务上限取 4MB 留出余量
+//
+// 返回：{ fileId, url }。**数据库里应当存 fileId**，url 是临时链接、过期即失效，
+// 读取时再由 calendarDaily / messageList 等换成新的临时链接。
 const { app, getParams, getUserId } = require('./common');
 
-// HTTP 访问服务请求体上限约 6MB，base64 膨胀约 33%，限制原图 3MB
-const MAX_SIZE = 3 * 1024 * 1024;
+const MAX_SIZE = 4 * 1024 * 1024; // 4MB
+const MAX_SIZE_MB = Math.round(MAX_SIZE / 1024 / 1024);
 const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'];
 
 // 业务目录白名单：防止任意路径写入
@@ -19,62 +29,73 @@ const ALLOWED_FOLDERS = {
   'messages': true,
 };
 
-exports.main = async (event) => {
-  const params = getParams(event);
+// 从 Content-Type 推断后缀
+function extFromMime(mime) {
+  const m = String(mime || '').match(/image\/([\w.+-]+)/i);
+  if (!m) return '';
+  const ext = m[1].toLowerCase() === 'jpeg' ? 'jpg' : m[1].toLowerCase();
+  return ALLOWED_EXT.includes(ext) ? ext : '';
+}
 
+exports.main = async (event) => {
   const { userId, error } = getUserId(event);
   if (error) return error;
 
-  const { fileName, fileContent } = params;
-  if (typeof fileContent !== 'string' || !fileContent) {
+  const headers = event.headers || {};
+  const contentType = String(headers['content-type'] || headers['Content-Type'] || '');
+  const query = event.queryStringParameters || {};
+  const params = getParams(event);
+  const fileName = query.fileName || params.fileName;
+
+  let buffer = null;
+  let ext = '';
+
+  if (event.isBase64Encoded === true && typeof event.body === 'string') {
+    // 主路径：网关把非文本 body base64 后透传
+    buffer = Buffer.from(event.body, 'base64');
+    ext = extFromMime(contentType);
+  } else if (typeof params.fileContent === 'string' && params.fileContent) {
+    // 兼容路径：旧版 App 的 JSON base64（受 100KB 文本档限制，只能传小图）
+    const match = params.fileContent.match(/^data:(image\/[\w.+-]+);base64,(.*)$/s);
+    buffer = Buffer.from(match ? match[2] : params.fileContent, 'base64');
+    ext = extFromMime(match ? match[1] : '');
+  } else {
+    // 形态不符合预期时打日志，便于判断网关到底怎么传的 body。
+    // 不猜测 latin-1 解码 —— 猜错会静默存进一张损坏的图。
+    console.error('上传入参无法识别:', {
+      isBase64Encoded: event.isBase64Encoded,
+      contentType,
+      bodyType: typeof event.body,
+      bodyLen: typeof event.body === 'string' ? event.body.length : -1,
+    });
     return { code: 400, message: '缺少图片内容', data: null };
   }
 
-  // 解析 data:image/png;base64,xxx 前缀
-  let mime = '';
-  let base64 = fileContent;
-  const match = fileContent.match(/^data:(image\/[\w.+-]+);base64,(.*)$/s);
-  if (match) {
-    mime = match[1];
-    base64 = match[2];
-  }
-
-  // 优先用文件名后缀，其次用 MIME 类型推断
-  let ext = '';
+  // 文件名后缀优先于 MIME 推断
   if (typeof fileName === 'string' && fileName) {
     const nameExt = fileName.split('.').pop().toLowerCase();
-    if (/^[a-z0-9]{1,5}$/.test(nameExt)) ext = nameExt;
+    if (/^[a-z0-9]{1,5}$/.test(nameExt) && ALLOWED_EXT.includes(nameExt)) ext = nameExt;
   }
-  if (!ext && mime) ext = mime.replace('image/', '').replace('jpeg', 'jpg');
   if (!ext) ext = 'jpg';
 
-  if (!ALLOWED_EXT.includes(ext)) {
-    return { code: 400, message: '不支持的图片格式', data: null };
-  }
-
-  let buffer;
-  try {
-    buffer = Buffer.from(base64, 'base64');
-  } catch (e) {
-    return { code: 400, message: '图片内容解析失败', data: null };
-  }
-  if (!buffer.length) {
+  if (!buffer || !buffer.length) {
     return { code: 400, message: '图片内容为空', data: null };
   }
   if (buffer.length > MAX_SIZE) {
-    return { code: 400, message: '图片大小不能超过 3MB', data: null };
+    return { code: 400, message: `图片大小不能超过 ${MAX_SIZE_MB}MB`, data: null };
   }
 
   try {
-    // 业务路径隔离：folder 传入时按白名单目录存放；否则兼容旧路径 images/<userId>/
-    let baseDir = `images/${userId}`;
+    // 业务路径隔离：folder 必须在白名单内，并带上 userId 段，便于按用户管理文件
     const folder = typeof params.folder === 'string' ? params.folder.trim() : '';
-    if (folder) {
-      if (!ALLOWED_FOLDERS[folder]) {
-        return { code: 400, message: 'folder 仅支持 calendar/records、calendar/plans、messages', data: null };
-      }
-      baseDir = `${folder}/${userId}`;
+    if (folder && !ALLOWED_FOLDERS[folder]) {
+      return {
+        code: 400,
+        message: 'folder 仅支持 calendar/records、calendar/plans、messages',
+        data: null,
+      };
     }
+    const baseDir = folder ? `${folder}/${userId}` : `images/${userId}`;
 
     const cloudPath = `${baseDir}/${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
     const uploadRes = await app.uploadFile({

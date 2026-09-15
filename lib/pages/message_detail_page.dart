@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lome/models/message_model.dart';
 import 'package:lome/services/message_service.dart';
 import 'package:lome/pages/message_editor_page.dart';
+import 'package:lome/utils/app_constants.dart';
 
 class MessageDetailPage extends StatefulWidget {
   final Message message;
@@ -14,11 +17,56 @@ class MessageDetailPage extends StatefulWidget {
 class _MessageDetailPageState extends State<MessageDetailPage> {
   late Message _message;
   bool _isLoading = false;
+  String? _currentUserId;
+  bool _isMine = false;
 
   @override
   void initState() {
     super.initState();
     _message = widget.message;
+    _loadCurrentUser();
+  }
+
+  // ============ 获取当前用户ID + 判断归属 ============
+  Future<void> _loadCurrentUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString(AppConstants.userKey);
+      if (userJson != null) {
+        final userMap = jsonDecode(userJson);
+        _currentUserId = userMap['userId'];
+      }
+
+      setState(() {
+        _isMine = _message.authorId == _currentUserId;
+      });
+
+      print('【留言详情】当前用户: $_currentUserId, 作者: ${_message.authorId}, 是我的: $_isMine');
+
+      // ✅ 只有对方的留言才标记已读
+      if (!_isMine) {
+        _markAsRead();
+      }
+    } catch (e) {
+      print('【留言详情】加载用户失败: $e');
+    }
+  }
+
+  // ============ 标记已读（只对对方留言） ============
+  Future<void> _markAsRead() async {
+    if (_isMine) return;          // 自己的留言不标记
+    if (_message.isRead) return;  // 已读的不重复标记
+
+    try {
+      await MessageService.markAllRead();
+      if (mounted) {
+        setState(() {
+          _message = _message.copyWith(isRead: true);
+        });
+      }
+    } catch (e) {
+      print('标记已读失败: $e');
+    }
   }
 
   Future<void> _showReplyDialog() async {
@@ -98,20 +146,9 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
       );
       if (response['code'] == 0) {
         setState(() {
-          _message = Message(
-            id: _message.id,
-            authorId: _message.authorId,
-            authorName: _message.authorName,
-            authorAvatar: _message.authorAvatar,
-            content: _message.content,
-            images: _message.images,
-            emotionTag: _message.emotionTag,
-            isRead: _message.isRead,
-            createTime: _message.createTime,
+          _message = _message.copyWith(
             hasReply: true,
             replyContent: content,
-            replyAuthorId: _message.replyAuthorId,
-            replyAuthorName: _message.replyAuthorName,
           );
           _isLoading = false;
         });
@@ -237,7 +274,7 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
         builder: (_) => Scaffold(
           backgroundColor: Colors.black,
           body: GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () => Navigator.pop(context, true),
             child: Center(
               child: InteractiveViewer(
                 minScale: 0.5,
@@ -291,14 +328,14 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
     );
   }
 
-  // ===== 顶部栏：返回 + 编辑/删除（如果是我的留言） =====
+  // ===== 顶部栏 =====
   Widget _buildHeader() {
     return SizedBox(
       height: 56,
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () => Navigator.pop(context, true),
             child: Container(
               width: 56,
               height: 48,
@@ -426,6 +463,7 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
                     height: 1.5,
                   ),
                 ),
+                // ===== 图片 =====
                 if (_message.images.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Wrap(
@@ -434,28 +472,50 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
                     children: _message.images.map((img) {
                       return GestureDetector(
                         onTap: () => _showImagePreview(img),
-                        child: Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8E2DD),
-                            borderRadius: BorderRadius.circular(12),
-                            image: DecorationImage(
-                              image: NetworkImage(img),
-                              fit: BoxFit.cover,
-                              onError: (exception, stackTrace) {},
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.image,
-                            size: 40,
-                            color: Color(0xFFB8A8A2),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            img,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (ctx, error, stack) {
+                              return Container(
+                                width: 100,
+                                height: 100,
+                                color: const Color(0xFFE8E2DD),
+                                child: const Icon(
+                                  Icons.broken_image,
+                                  size: 40,
+                                  color: Color(0xFFB8A8A2),
+                                ),
+                              );
+                            },
+                            loadingBuilder: (ctx, child, progress) {
+                              if (progress == null) return child;
+                              return Container(
+                                width: 100,
+                                height: 100,
+                                color: const Color(0xFFE8E2DD),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFFB8A8A2),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       );
                     }).toList(),
                   ),
                 ],
+                // ===== 情绪标签 =====
                 if (_message.emotionTag != null && _message.emotionTag!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -569,95 +629,97 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
     return const SizedBox.shrink();
   }
 
-  // ===== 底部按钮：编辑/删除（自己的）+ 回应（对方的）=====
+  // ===== 底部按钮 =====
   Widget _buildBottomButtons() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          // 编辑按钮
-          Expanded(
-            child: GestureDetector(
-              onTap: _editMessage,
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.edit, color: Color(0xFF887770), size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      "编辑",
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFF887770),
+          // 编辑按钮（仅我的留言）
+          if (_isMine) ...[
+            Expanded(
+              child: GestureDetector(
+                onTap: _editMessage,
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.edit, color: Color(0xFF887770), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        "编辑",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF887770),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          // 删除按钮
-          Expanded(
-            child: GestureDetector(
-              onTap: _deleteMessage,
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.delete_outline, color: Color(0xFF887770), size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      "删除",
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFF887770),
+            const SizedBox(width: 12),
+            // 删除按钮（仅我的留言）
+            Expanded(
+              child: GestureDetector(
+                onTap: _deleteMessage,
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.delete_outline, color: Color(0xFF887770), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        "删除",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF887770),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          // 回应按钮
-          Expanded(
-            child: GestureDetector(
-              onTap: _showReplyDialog,
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.reply, color: Color(0xFF887770), size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      "回应",
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFF887770),
+          ] else ...[
+            // 回应按钮（仅对方的留言）
+            Expanded(
+              child: GestureDetector(
+                onTap: _showReplyDialog,
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.reply, color: Color(0xFF887770), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        "回应",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF887770),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

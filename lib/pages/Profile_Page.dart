@@ -1,6 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:lome/pages/login_page.dart';
 import 'package:lome/pages/welcome_guide_page.dart';
+import 'package:lome/pages/bind_success_page.dart';
+import 'package:lome/services/auth_service.dart';
+import 'package:lome/models/user_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfilePage extends StatefulWidget {
   final bool isBound;
@@ -11,13 +15,113 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  late bool _isBound;
+  bool _isBound = false;
+  User? _user;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _isBound = widget.isBound;
+    _loadUserFromServer();
   }
+
+  // ============ 从后端获取最新用户信息 ============
+  Future<void> _loadUserFromServer() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await AuthService().getUserInfo();
+      if (mounted) {
+        setState(() {
+          _user = user;
+          _isBound = user.isBound;
+          _isLoading = false;
+        });
+      }
+      print('【个人信息】昵称: ${user.nickname}, 绑定: ${user.isBound}, 伴侣: ${user.partnerNickname}');
+    } catch (e) {
+      print('【个人信息】加载失败: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // ============ 前往绑定 ============
+  Future<void> _goToBind() async {
+    // 跳转到绑定页，等待返回结果
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const WelcomeGuidePage()),
+    );
+
+    // 绑定页返回成功结果
+    if (result != null && result is Map && result['success'] == true) {
+      // 1. 先刷新用户信息
+      await _loadUserFromServer();
+
+      // 2. 再跳转到成功页
+      if (mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BindSuccessPage(
+              partnerNickname: result['partnerNickname'] ?? 'TA',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  // ============ 解绑 ============
+ Future<void> _unbind() async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('提示'),
+      content: const Text('确定要解除绑定吗？'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('确认'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirm != true) return;
+
+  setState(() => _isLoading = true);
+  try {
+    await AuthService().unbind();
+
+    // ✅ 清除本地绑定日期
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('bind_date');
+
+    await _loadUserFromServer();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已解除绑定')),
+      );
+      // ✅ 通知父页面刷新
+      Navigator.pop(context, true);
+    }
+  } catch (e) {
+    if (mounted) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('解绑失败: $e')),
+      );
+    }
+  }
+}
+
 
   void _showLogoutDialog(BuildContext ctx) {
     showDialog(
@@ -26,14 +130,20 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text("提示"),
         content: const Text("确定退出登录账号？"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text("取消")),
           TextButton(
-            onPressed: () {
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text("取消"),
+          ),
+          TextButton(
+            onPressed: () async {
               Navigator.pop(dialogCtx);
-              Navigator.of(ctx).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => LoginPage()),
-                (route) => false,
-              );
+              await AuthService().logout();
+              if (ctx.mounted) {
+                Navigator.of(ctx).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
+              }
             },
             child: const Text("确认"),
           ),
@@ -76,7 +186,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 内部条目：增大阴影偏移，按钮更“浮起”，明暗对比增强
+  // 内部条目
   Widget _buildItemGlass({
     required String title,
     String subText = "",
@@ -96,14 +206,12 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           borderRadius: BorderRadius.circular(26),
           boxShadow: const [
-            // 右下投影：更大偏移，营造悬浮距离
             BoxShadow(
               color: Color(0x1A000000),
               blurRadius: 7,
               offset: Offset(4, 4),
               spreadRadius: 0,
             ),
-            // 左上高光，强化凸起感
             BoxShadow(
               color: Color(0x26FFFFFF),
               blurRadius: 4,
@@ -172,7 +280,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     const Text(
                       "个人信息",
                       style: TextStyle(
-                        fontSize:30,
+                        fontSize: 30,
                         color: Color(0xFFBED5DB),
                         letterSpacing: 2,
                       ),
@@ -180,16 +288,16 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-               Center(
+                Center(
                   child: Container(
-                  width: 1600.0,
-                  height: 10.0,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFAFC5AE).withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(100.0),
+                    width: 1600.0,
+                    height: 10.0,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFAFC5AE).withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(100.0),
+                    ),
                   ),
-                 ),
-               ),
+                ),
                 const SizedBox(height: 30),
 
                 // 圆形头像
@@ -208,9 +316,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 const SizedBox(height: 10),
 
-                const Text(
-                  "UserName",
-                  style: TextStyle(
+                // 昵称
+                Text(
+                  _isLoading ? '加载中...' : (_user?.nickname ?? 'UserName'),
+                  style: const TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.w300,
                     color: Color(0xFFC4B8A8),
@@ -221,41 +330,43 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 20),
 
                 // 绑定状态标签
-                _isBound
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color.fromRGBO(222, 238, 222, 0.45),
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        child: const Text(
-                          "✓ 已绑定",
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Color(0xFF507850),
-                          ),
-                        ),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color.fromRGBO(244, 224, 224, 0.45),
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        child: const Text(
-                          "✗ 未绑定",
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Color(0xFF965656),
-                          ),
-                        ),
-                      ),
+                _isLoading
+                    ? const SizedBox(height: 30)
+                    : (_isBound
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(222, 238, 222, 0.45),
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: const Text(
+                              "✓ 已绑定",
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF507850),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(244, 224, 224, 0.45),
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: const Text(
+                              "✗ 未绑定",
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF965656),
+                              ),
+                            ),
+                          )),
 
                 const SizedBox(height: 30),
 
@@ -286,7 +397,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       _buildItemGlass(
                         title: "       伴侣名称",
-                        subText: _isBound ? "Name" : "暂无伴侣",
+                        subText: _isBound
+                            ? (_user?.partnerNickname ?? '未知')
+                            : "暂无伴侣",
                         onTap: () {},
                       ),
                       const SizedBox(height: 16),
@@ -300,19 +413,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         title: _isBound ? "       解除绑定" : "       前往绑定",
                         onTap: () async {
                           if (!_isBound) {
-                            // 跳转欢迎绑定页面
-                            final bindSuccess = await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => WelcomeGuidePage()),
-                            );
-                            // 绑定成功后刷新页面状态
-                            if (bindSuccess == true) {
-                              setState(() {
-                                _isBound = true;
-                              });
-                            }
+                            await _goToBind();
                           } else {
-                            setState(() => _isBound = !_isBound);
+                            await _unbind();
                           }
                         },
                       ),
