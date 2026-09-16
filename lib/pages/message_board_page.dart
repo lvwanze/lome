@@ -4,6 +4,7 @@ import 'package:lome/services/auth_service.dart';
 import 'package:lome/models/message_model.dart';
 import 'package:lome/pages/message_detail_page.dart';
 import 'package:lome/pages/message_editor_page.dart';
+import 'package:lome/widgets/app_network_image.dart';
 
 class MessageBoardPage extends StatefulWidget {
   const MessageBoardPage({super.key});
@@ -136,7 +137,7 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
               child: InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 4.0,
-                child: Image.network(
+                child: AppNetworkImage(
                   imageUrl,
                   fit: BoxFit.contain,
                   errorBuilder: (ctx, error, stack) {
@@ -495,7 +496,7 @@ class _MessageBoardPageState extends State<MessageBoardPage> {
                       onTap: () => _showImagePreview(img),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
+                        child: AppNetworkImage(
                           img,
                           width: 60,
                           height: 60,

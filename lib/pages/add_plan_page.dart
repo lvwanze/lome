@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:lome/services/api_service.dart';
+import 'package:lome/widgets/app_network_image.dart';
 
 class AddRecordPage extends StatefulWidget {
   final DateTime selectedDate;
@@ -21,8 +21,13 @@ class _AddRecordPageState extends State<AddRecordPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   List<Uint8List> _imageBytes = [];
+  // 编辑已有记录时回填的服务端图片 URL（临时/永久链接均可直接展示），
+  // 保存时与本次新选的图片合并回传，避免被只传新图的列表覆盖丢失。
+  List<String> _existingImageUrls = [];
   final int _maxImages = 4;
   bool _isSaving = false;
+
+  int get _totalImages => _existingImageUrls.length + _imageBytes.length;
 
   // ============ 日期格式化 ============
   String _formatDate(DateTime date) {
@@ -40,12 +45,16 @@ class _AddRecordPageState extends State<AddRecordPage> {
     if (widget.existingRecord != null) {
       _titleController.text = widget.existingRecord?['title'] ?? '';
       _contentController.text = widget.existingRecord?['content'] ?? '';
+      _existingImageUrls = (widget.existingRecord?['images'] as List? ?? [])
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
   }
 
   // ============ 图片选择 ============
   Future<void> _pickImage() async {
-    if (_imageBytes.length >= _maxImages) {
+    if (_totalImages >= _maxImages) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('最多只能添加4张图片'),
@@ -93,6 +102,12 @@ class _AddRecordPageState extends State<AddRecordPage> {
     });
   }
 
+  void _removeExistingImage(int index) {
+    setState(() {
+      _existingImageUrls.removeAt(index);
+    });
+  }
+
   void _showImagePreview(Uint8List bytes) {
     Navigator.push(
       context,
@@ -117,12 +132,43 @@ class _AddRecordPageState extends State<AddRecordPage> {
     );
   }
 
+  void _showNetworkImagePreview(String url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          body: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: AppNetworkImage(
+                  url,
+                  fit: BoxFit.contain,
+                  errorBuilder: (ctx, error, stack) {
+                    return const Icon(
+                      Icons.broken_image,
+                      size: 80,
+                      color: Colors.grey,
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ============ 保存 ============
   Future<void> _saveRecord() async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
 
-    if (title.isEmpty && content.isEmpty && _imageBytes.isEmpty) {
+    if (title.isEmpty && content.isEmpty && _totalImages == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('请至少填写一项内容'),
@@ -140,6 +186,8 @@ class _AddRecordPageState extends State<AddRecordPage> {
       final imageUrls = await _uploadImages();
 
       // ============ 2. 保存记录（含图片URL） ============
+      // 已有图片的 URL 原样保留 + 新上传图片的 fileId，一起覆盖回传；
+      // 服务端读取时非 cloud:// 的历史链接会原样返回（见 common.js fillImageUrls）
       final isEdit = widget.existingRecord != null;
       final response = await ApiService.post(
         isEdit ? '/api/v1/record/update' : '/api/v1/record/create',
@@ -148,7 +196,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
                 'recordId': widget.existingRecord?['recordId'],
                 'title': title,
                 'content': content,
-                'images': imageUrls,
+                'images': [..._existingImageUrls, ...imageUrls],
                 'mood': 'happy',
               }
             : {
@@ -373,7 +421,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
                               style: TextStyle(fontSize: 18, color: Color(0xff887882)),
                             ),
                             Text(
-                              '${_imageBytes.length}/$_maxImages',
+                              '${_totalImages}/$_maxImages',
                               style: const TextStyle(
                                 fontSize: 16,
                                 color: Color(0xff998892),
@@ -444,6 +492,11 @@ class _AddRecordPageState extends State<AddRecordPage> {
   Widget _buildImageList() {
     List<Widget> items = [];
 
+    for (int i = 0; i < _existingImageUrls.length; i++) {
+      items.add(_buildNetworkImageItem(_existingImageUrls[i], i));
+      items.add(const SizedBox(width: 10));
+    }
+
     for (int i = 0; i < _imageBytes.length; i++) {
       items.add(_buildImageItem(_imageBytes[i], i));
       if (i < _imageBytes.length - 1) {
@@ -451,8 +504,8 @@ class _AddRecordPageState extends State<AddRecordPage> {
       }
     }
 
-    if (_imageBytes.length < _maxImages) {
-      if (_imageBytes.isNotEmpty) {
+    if (_totalImages < _maxImages) {
+      if (_totalImages > 0) {
         items.add(const SizedBox(width: 10));
       }
       items.add(_buildAddImageButton());
@@ -460,6 +513,75 @@ class _AddRecordPageState extends State<AddRecordPage> {
 
     return Row(
       children: items,
+    );
+  }
+
+  Widget _buildNetworkImageItem(String url, int index) {
+    return GestureDetector(
+      onTap: () => _showNetworkImagePreview(url),
+      child: Stack(
+        children: [
+          Container(
+            width: 78,
+            height: 78,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.75),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xffdddddd), width: 1),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: AppNetworkImage(
+                url,
+                fit: BoxFit.cover,
+                loadingBuilder: (ctx, child, progress) {
+                  if (progress == null) return child;
+                  return Container(
+                    color: const Color(0xffeeeeee),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (ctx, error, stack) {
+                  return Container(
+                    color: const Color(0xffeeeeee),
+                    child: const Icon(
+                      Icons.broken_image,
+                      size: 24,
+                      color: Color(0xffcccccc),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: () => _removeExistingImage(index),
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: const Color(0xffcccccc),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.close,
+                  size: 14,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
