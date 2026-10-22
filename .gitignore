@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 .env
+
+# 后端本地测试依赖
+/cloudbase/node_modules/
