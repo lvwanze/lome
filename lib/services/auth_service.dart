@@ -83,6 +83,7 @@ class AuthService {
       }
 
       final jsonData = jsonDecode(response.body);
+      print('【请求$endpoint原始返回】$jsonData');
       return ApiResponse<T>.fromJson(jsonData, fromJsonT);
     } catch (e) {
       print('【网络请求失败】$endpoint: $e');
@@ -228,8 +229,10 @@ class AuthService {
 
       final jsonData = jsonDecode(response.body);
       print('useBindCode 原始响应: $jsonData');
+      // ========== 修复点：安全解析code，兼容string/int ==========
+      final rawCode = jsonData['code'];
+      final int codeResult = rawCode is int ? rawCode : int.parse(rawCode.toString());
 
-      final codeResult = jsonData['code'] as int;
       if (codeResult != 0) {
         throw Exception(_getErrorMessage(codeResult, jsonData['message'] ?? ''));
       }
@@ -259,7 +262,8 @@ class AuthService {
     if (!response.isSuccess) {
       throw Exception(_getErrorMessage(response.code, response.message));
     }
-    await getUserInfo(); // 解绑成功后刷新本地用户信息
+    // 解绑成功，调用getUserInfo，拉取最新用户信息，更新本地存储
+    await getUserInfo();
   }
 
   // ---------- 4.7 退出登录 ----------
