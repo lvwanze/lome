@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:lome/services/api_service.dart';
 
-class AddRecordPage extends StatefulWidget {
+class AddPlanPage extends StatefulWidget {
   final DateTime selectedDate;
-  final Map<String, dynamic>? existingRecord;
-  const AddRecordPage({
+  final Map<String, dynamic>? existingPlan;
+  const AddPlanPage({
     super.key,
     required this.selectedDate,
-    this.existingRecord,
+    this.existingPlan,
   });
 
   @override
-  State<AddRecordPage> createState() => _AddRecordPageState();
+  State<AddPlanPage> createState() => _AddPlanPageState();
 }
 
-class _AddRecordPageState extends State<AddRecordPage> {
+class _AddPlanPageState extends State<AddPlanPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   List<Uint8List> _imageBytes = [];
@@ -37,10 +36,19 @@ class _AddRecordPageState extends State<AddRecordPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.existingRecord != null) {
-      _titleController.text = widget.existingRecord?['title'] ?? '';
-      _contentController.text = widget.existingRecord?['content'] ?? '';
+    // 如果有已有数据，回显到输入框
+    if (widget.existingPlan != null) {
+      _titleController.text = widget.existingPlan?['title'] ?? '';
+      _contentController.text = widget.existingPlan?['content'] ?? '';
+      // 图片回显需要从 URL 加载，这里暂不处理
     }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
   }
 
   // ============ 图片选择 ============
@@ -57,34 +65,14 @@ class _AddRecordPageState extends State<AddRecordPage> {
     }
 
     final picker = ImagePicker();
-    // 先压缩再上传：长边 1920、JPEG 质量 80，相册原图一般能压到 1MB 以内
-    final image = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1920,
-      maxHeight: 1920,
-      imageQuality: 80,
-    );
-    if (image == null) return;
+    final image = await picker.pickImage(source: ImageSource.gallery);
 
-    final bytes = await image.readAsBytes();
-    if (bytes.length > ApiService.maxUploadBytes) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '图片过大（${(bytes.length / 1024 / 1024).toStringAsFixed(1)}MB），'
-            '请选择小于 ${ApiService.maxUploadBytes ~/ 1024 ~/ 1024}MB 的图片',
-          ),
-          backgroundColor: Colors.orange,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() {
+        _imageBytes.add(bytes);
+      });
     }
-
-    setState(() {
-      _imageBytes.add(bytes);
-    });
   }
 
   void _removeImage(int index) {
@@ -117,57 +105,44 @@ class _AddRecordPageState extends State<AddRecordPage> {
     );
   }
 
-  // ============ 保存 ============
-  Future<void> _saveRecord() async {
-    final title = _titleController.text.trim();
-    final content = _contentController.text.trim();
-
-    if (title.isEmpty && content.isEmpty && _imageBytes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('请至少填写一项内容'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
+  // ============ 保存（允许空内容） ============
+  Future<void> _savePlan() async {
+    if (_isSaving) return;
 
     setState(() => _isSaving = true);
 
     try {
-      // ============ 1. 先上传图片 ============
-      final imageUrls = await _uploadImages();
+      final title = _titleController.text.trim();
+      final content = _contentController.text.trim();
+      final isEdit = widget.existingPlan != null;
 
-      // ============ 2. 保存记录（含图片URL） ============
-      final isEdit = widget.existingRecord != null;
+      // 允许空内容保存
       final response = await ApiService.post(
-        isEdit ? '/api/v1/record/update' : '/api/v1/record/create',
+        isEdit ? '/api/v1/plan/update' : '/api/v1/plan/create',
         body: isEdit
             ? {
-                'recordId': widget.existingRecord?['recordId'],
+                'planId': widget.existingPlan?['planId'],
                 'title': title,
                 'content': content,
-                'images': imageUrls,
-                'mood': 'happy',
+                'images': [],
               }
             : {
                 'date': _formatDateKey(widget.selectedDate),
                 'title': title,
                 'content': content,
-                'images': imageUrls,
-                'mood': 'happy',
+                'images': [],
               },
       );
+
+      print('【规划】保存响应: $response');
 
       if (response['code'] == 0) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('保存成功 🎉'),
-              backgroundColor: Color(0xFF8AAA7A),
-              duration: Duration(seconds: 1),
-              behavior: SnackBarBehavior.floating,
+            SnackBar(
+              content: Text(isEdit ? '规划已更新' : '规划已保存'),
+              backgroundColor: const Color(0xFFA8C9A8),
+              duration: const Duration(seconds: 2),
             ),
           );
           Navigator.pop(context, true);
@@ -184,10 +159,11 @@ class _AddRecordPageState extends State<AddRecordPage> {
         }
       }
     } catch (e) {
+      print('【规划】保存异常: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('保存失败: $e'),
+            content: Text('网络异常，请稍后再试'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
           ),
@@ -200,27 +176,64 @@ class _AddRecordPageState extends State<AddRecordPage> {
     }
   }
 
-  // ============ 上传图片 ============
-  Future<List<String>> _uploadImages() async {
-  if (_imageBytes.isEmpty) return [];
-  List<String> urls = [];
-  for (var bytes in _imageBytes) {
+  // ============ 取消规划（删除） ============
+  Future<void> _deletePlan() async {
+    if (widget.existingPlan == null) {
+      Navigator.pop(context, false);
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
     try {
-      final response = await ApiService.uploadImage(
-        imageBytes: bytes,
-        folder: 'calendar/plans',
+      final response = await ApiService.post(
+        '/api/v1/plan/delete',
+        body: {
+          'planId': widget.existingPlan?['planId'],
+        },
       );
+
+      print('【规划】删除响应: $response');
+
       if (response['code'] == 0) {
-        // 存 fileId 而不是 url：url 是临时链接、会过期，读取时由
-        // calendarDaily 重新换取（见 cloudbase/functions/common.js fillImageUrls）
-        urls.add(response['data']['fileId']);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('已取消规划'),
+              backgroundColor: Color(0xFFA8C9A8),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          Navigator.pop(context, true);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response['message'] ?? '取消失败'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       }
     } catch (e) {
-      print('图片上传失败: $e');
+      print('【规划】删除异常: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('取消失败，请重试'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
-  return urls;
-}
 
   // ============ UI 构建 ============
   @override
@@ -260,13 +273,13 @@ class _AddRecordPageState extends State<AddRecordPage> {
                           child: IconButton(
                             padding: EdgeInsets.zero,
                             icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Color(0xff888888)),
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => Navigator.pop(context, false),
                           ),
                         ),
                       ),
                       const Center(
                         child: Text(
-                          "记录",
+                          "规划",
                           style: TextStyle(
                             fontSize: 30,
                             color: Color(0xFFBED5DB),
@@ -289,22 +302,24 @@ class _AddRecordPageState extends State<AddRecordPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // ===== 记录时间（显示选中日期） =====
+                // ===== 计划时间（显示选中日期） =====
                 _buildInputCard(
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    title: const Text("记录时间", style: TextStyle(fontSize: 18, color: Color(0xff887882))),
+                    title: const Text("计划时间", style: TextStyle(fontSize: 18, color: Color(0xff887882))),
                     subtitle: Text(
                       _formatDate(widget.selectedDate),
                       style: const TextStyle(fontSize: 17, color: Color(0xffC9C0C6)),
                     ),
                     trailing: const Icon(Icons.keyboard_arrow_right, color: Color(0xffC9C0C6), size: 24),
-                    onTap: () {},
+                    onTap: () {
+                      // 时间选择逻辑后续写在这里
+                    },
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // ===== 记录标题 =====
+                // ===== 计划标题 =====
                 _buildInputCard(
                   child: TextField(
                     controller: _titleController,
@@ -312,14 +327,14 @@ class _AddRecordPageState extends State<AddRecordPage> {
                     decoration: const InputDecoration(
                       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: InputBorder.none,
-                      hintText: "和TA一起做了什么",
+                      hintText: "和TA一起做什么（可留空）",
                       hintStyle: TextStyle(fontSize: 17, color: Color(0xffC9C0C6)),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // ===== 记录备注 =====
+                // ===== 计划备注 =====
                 _buildInputCard(
                   child: Stack(
                     children: [
@@ -331,7 +346,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
                         decoration: const InputDecoration(
                           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           border: InputBorder.none,
-                          hintText: "写下故事的细节……",
+                          hintText: "写下计划细节……（可留空）",
                           hintStyle: TextStyle(fontSize: 17, color: Color(0xffC9C0C6)),
                         ),
                       ),
@@ -389,18 +404,18 @@ class _AddRecordPageState extends State<AddRecordPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // ===== 保存记录按钮 =====
+                // ===== 保存规划按钮 =====
                 SizedBox(
                   width: double.infinity,
                   height: 64,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xffF8D2DC),
+                      backgroundColor: const Color(0xffC2D8C8),
                       elevation: 2,
                       shadowColor: Colors.black12,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                     ),
-                    onPressed: _isSaving ? null : _saveRecord,
+                    onPressed: _isSaving ? null : _savePlan,
                     child: _isSaving
                         ? const SizedBox(
                             width: 24,
@@ -410,20 +425,45 @@ class _AddRecordPageState extends State<AddRecordPage> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            "保存记录",
-                            style: TextStyle(fontSize: 20, color: Colors.white),
+                        : Text(
+                            widget.existingPlan != null ? "保存修改" : "保存规划",
+                            style: const TextStyle(fontSize: 20, color: Colors.white),
                           ),
                   ),
                 ),
+
+                // ===== 取消规划按钮（仅编辑时显示） =====
+                if (widget.existingPlan != null) ...[
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.withOpacity(0.1),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                          side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                        ),
+                      ),
+                      onPressed: _isSaving ? null : _deletePlan,
+                      child: const Text(
+                        "取消规划",
+                        style: TextStyle(fontSize: 18, color: Colors.red),
+                      ),
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 14),
 
-                // ===== 取消 =====
+                // ===== 返回 =====
                 Center(
                   child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () => Navigator.pop(context, false),
                     child: const Text(
-                      "取消",
+                      "返回",
                       style: TextStyle(
                         fontSize: 18,
                         color: Color(0xffB4C8BB),
