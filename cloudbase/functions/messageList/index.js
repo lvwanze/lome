@@ -20,6 +20,11 @@ function buildItem(doc, userMap) {
     readTime: doc.readTime || null,
     createTime: doc.createTime,
     hasReply: !!(doc.replyContent && doc.replyTime),
+    replyId: doc.replyId || null,
+    replyContent: doc.replyContent || null,
+    replyAuthorId: doc.replyAuthorId || null,
+    replyAuthorName: replyAuthor.nickname || '',
+    replyTime: doc.replyTime || null,
   };
 }
 

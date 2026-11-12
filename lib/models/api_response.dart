@@ -16,8 +16,18 @@ class ApiResponse<T> {
     Map<String, dynamic> json,
     T Function(dynamic) fromJsonT,
   ) {
+    // 安全解析code：同时支持int类型 和 字符串类型的数字
+    final rawCode = json['code'] ?? -1;
+    final int parseCode;
+    if(rawCode is int){
+      parseCode = rawCode;
+    }else{
+      // 后端返回字符串，转成int；解析失败默认-1
+      parseCode = int.tryParse(rawCode.toString()) ?? -1;
+    }
+
     return ApiResponse<T>(
-      code: json['code'] ?? -1,
+      code: parseCode,
       message: json['message'] ?? '未知错误',
       data: json['data'] != null ? fromJsonT(json['data']) : null,
     );
