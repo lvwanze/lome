@@ -4,7 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:lome/services/auth_service.dart';
 import 'package:lome/pages/home_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:lome/pages/bind_success_page.dart';
 
 class WelcomeGuidePage extends StatefulWidget {
   const WelcomeGuidePage({super.key});
@@ -26,6 +26,10 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
 
   // 动画步数控制
   int _animationStep = 0;
+
+  // 绑定成功相关
+  bool _showSuccessPage = false;
+  String _partnerNickname = '';
 
   final List<GuidePageData> _pages = const [
     GuidePageData(
@@ -52,16 +56,15 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
   }
 
   void _startAnimations() async {
-    if (!mounted) return;
     setState(() => _animationStep = 0);
     await Future.delayed(const Duration(milliseconds: 100));
-    if (!mounted) return;
+
     setState(() => _animationStep = 1);
     await Future.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
+
     setState(() => _animationStep = 2);
     await Future.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
+
     setState(() => _animationStep = 3);
   }
 
@@ -109,8 +112,10 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
 
   Widget _buildPage(GuidePageData data, int index) {
     final bgImage = 'assets/images/welcome_bg_${index + 1}.png';
-    // 只在第二页(index=1)向左偏移裁剪，隐藏图片右侧封条；首页保持默认居中
-    final imageAlignment = index == 1 ? const Alignment(-0.08, 0) : Alignment.center;
+    final isSuccess = data.isSuccessPage && _showSuccessPage;
+    final displaySubtitle = isSuccess
+        ? '你和 $_partnerNickname 成为了伴侣'
+        : data.subtitle;
 
     return Container(
       width: double.infinity,
@@ -125,30 +130,31 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
       child: SafeArea(
         child: Column(
           children: [
-            // 顶部跳过按钮
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const HomePage()),
-                      );
-                    },
-                    child: Text(
-                      '跳过',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white.withOpacity(0.6),
+            // ===== 顶部：跳过按钮（成功页隐藏） =====
+            if (!isSuccess)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const HomePage()),
+                        );
+                      },
+                      child: Text(
+                        '跳过',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.6),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
             Expanded(
               child: Padding(
@@ -201,28 +207,28 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
               ),
             ),
 
-            // 底部指示器
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _pages.length,
-                  (pageIndex) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 5),
-                    width: _currentPage == pageIndex ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: _currentPage == pageIndex
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(4),
+            if (!isSuccess)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    _pages.length,
+                    (index) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 1200),
+                      margin: const EdgeInsets.symmetric(horizontal: 5),
+                      width: _currentPage == index ? 24 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: _currentPage == index
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -266,7 +272,7 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
             },
             child: Column(
               children: [
-                const Text(
+                Text(
                   '欢迎来到LOME',
                   style: TextStyle(
                     fontSize: 60,
@@ -644,6 +650,7 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
 
   Future<void> _submitBindCode() async {
     if (_isBinding) return;
+
     final code = _bindCodeController.text.trim().toUpperCase();
     if (code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -655,13 +662,14 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
     try {
       final result = await AuthService().useBindCode(code);
       if (mounted) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('bind_date', DateTime.now().toIso8601String());
-        // 返回上一页，带回绑定成功信息
-        Navigator.pop(context, {
-          'success': true,
-          'partnerNickname': result['partnerNickname'],
-        });
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BindSuccessPage(
+              partnerNickname: result['partnerNickname']!,
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

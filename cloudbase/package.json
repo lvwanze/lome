@@ -1,0 +1,16 @@
+{
+  "name": "lome-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lome 云函数后端验证与部署工具",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "sync:letters": "node tools/sync-slow-letters.js",
+    "check:letters": "node tools/sync-slow-letters.js --check",
+    "check:common": "node tools/sync-common.js --check"
+  },
+  "devDependencies": {
+    "@cloudbase/node-sdk": "2.11.0",
+    "jsonwebtoken": "9.0.2"
+  }
+}

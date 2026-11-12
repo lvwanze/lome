@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:lome/services/api_service.dart';
 import 'package:lome/services/message_service.dart';
+import 'package:lome/widgets/app_network_image.dart';
 
 class NewMessagePage extends StatefulWidget {
   final Map<String, dynamic>? existingMessage;
@@ -16,9 +17,14 @@ class _NewMessagePageState extends State<NewMessagePage> {
   final TextEditingController _textController = TextEditingController();
   int _charCount = 0;
   List<Uint8List> _imageBytes = [];
+  // 编辑已有留言时回填的服务端图片 URL（临时/永久链接均可直接展示），
+  // 发送时与本次新选的图片合并回传，避免被只传新图的列表覆盖丢失。
+  List<String> _existingImageUrls = [];
   final int _maxImages = 2;
   String? _selectedEmotionTag;
   bool _isSending = false;
+
+  int get _totalImages => _existingImageUrls.length + _imageBytes.length;
 
   @override
   void initState() {
@@ -28,6 +34,10 @@ class _NewMessagePageState extends State<NewMessagePage> {
       _textController.text = widget.existingMessage?['content'] ?? '';
       _charCount = _textController.text.length;
       _selectedEmotionTag = widget.existingMessage?['emotionTag'];
+      _existingImageUrls = (widget.existingMessage?['images'] as List? ?? [])
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
 
     _textController.addListener(() {
@@ -44,7 +54,7 @@ class _NewMessagePageState extends State<NewMessagePage> {
   }
 
   Future<void> _pickImage() async {
-    if (_imageBytes.length >= _maxImages) {
+    if (_totalImages >= _maxImages) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('最多只能添加2张图片'),
@@ -92,6 +102,12 @@ class _NewMessagePageState extends State<NewMessagePage> {
     });
   }
 
+  void _removeExistingImage(int index) {
+    setState(() {
+      _existingImageUrls.removeAt(index);
+    });
+  }
+
   void _showImagePreview(Uint8List bytes) {
     Navigator.push(
       context,
@@ -107,6 +123,37 @@ class _NewMessagePageState extends State<NewMessagePage> {
                 child: Image.memory(
                   bytes,
                   fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showNetworkImagePreview(String url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          body: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: AppNetworkImage(
+                  url,
+                  fit: BoxFit.contain,
+                  errorBuilder: (ctx, error, stack) {
+                    return const Icon(
+                      Icons.broken_image,
+                      size: 80,
+                      color: Colors.grey,
+                    );
+                  },
                 ),
               ),
             ),
@@ -144,7 +191,7 @@ class _NewMessagePageState extends State<NewMessagePage> {
   Future<void> _publishMessage() async {
     final content = _textController.text.trim();
 
-    if (content.isEmpty && _imageBytes.isEmpty) {
+    if (content.isEmpty && _totalImages == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('请写下你想说的话或添加图片'),
@@ -164,10 +211,12 @@ class _NewMessagePageState extends State<NewMessagePage> {
       dynamic response;
 
       if (isEdit) {
+        // 已有图片的 URL 原样保留 + 新上传图片的 fileId，一起覆盖回传；
+        // 服务端读取时非 cloud:// 的历史链接会原样返回（见 common.js fillImageUrls）
         response = await MessageService.update(
           messageId: widget.existingMessage?['id'] ?? widget.existingMessage?['_id'] ?? '',
           content: content,
-          images: imageUrls,
+          images: [..._existingImageUrls, ...imageUrls],
           emotionTag: _selectedEmotionTag,
         );
       } else {
@@ -260,6 +309,11 @@ class _NewMessagePageState extends State<NewMessagePage> {
   Widget _buildImageList() {
     List<Widget> items = [];
 
+    for (int i = 0; i < _existingImageUrls.length; i++) {
+      items.add(_buildNetworkImageItem(_existingImageUrls[i], i));
+      items.add(const SizedBox(width: 10));
+    }
+
     for (int i = 0; i < _imageBytes.length; i++) {
       items.add(_buildImageItem(_imageBytes[i], i));
       if (i < _imageBytes.length - 1) {
@@ -267,8 +321,8 @@ class _NewMessagePageState extends State<NewMessagePage> {
       }
     }
 
-    if (_imageBytes.length < _maxImages) {
-      if (_imageBytes.isNotEmpty) {
+    if (_totalImages < _maxImages) {
+      if (_totalImages > 0) {
         items.add(const SizedBox(width: 10));
       }
       items.add(_buildAddImageButton());
@@ -276,6 +330,70 @@ class _NewMessagePageState extends State<NewMessagePage> {
 
     return Row(
       children: items,
+    );
+  }
+
+  Widget _buildNetworkImageItem(String url, int index) {
+    return GestureDetector(
+      onTap: () => _showNetworkImagePreview(url),
+      child: Stack(
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: AppNetworkImage(
+                url,
+                fit: BoxFit.cover,
+                loadingBuilder: (ctx, child, progress) {
+                  if (progress == null) return child;
+                  return Container(
+                    color: const Color(0xFFE8E2DD),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (ctx, error, stack) {
+                  return Container(
+                    color: const Color(0xFFE8E2DD),
+                    child: const Icon(
+                      Icons.broken_image,
+                      size: 32,
+                      color: Color(0xFFB8A8A2),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          Positioned(
+            top: 6,
+            right: 6,
+            child: GestureDetector(
+              onTap: () => _removeExistingImage(index),
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE8E2DD),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, size: 16, color: Color(0xFF94847D)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -417,7 +535,8 @@ class _NewMessagePageState extends State<NewMessagePage> {
                       GestureDetector(
                         onTap: () {
                           if (_textController.text.isNotEmpty ||
-                              _imageBytes.isNotEmpty) {
+                              _imageBytes.isNotEmpty ||
+                              _existingImageUrls.isNotEmpty) {
                             _showDiscardDialog();
                           } else {
                             Navigator.pop(context);
@@ -548,12 +667,12 @@ class _NewMessagePageState extends State<NewMessagePage> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        if (_imageBytes.isNotEmpty) ...[
+                        if (_totalImages > 0) ...[
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                "已选图片 ${_imageBytes.length}/$_maxImages",
+                                "已选图片 $_totalImages/$_maxImages",
                                 style: const TextStyle(fontSize: 16, color: Color(0xFF94847D)),
                               ),
                             ],

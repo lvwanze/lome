@@ -5,6 +5,7 @@ import 'package:lome/models/message_model.dart';
 import 'package:lome/services/message_service.dart';
 import 'package:lome/pages/message_editor_page.dart';
 import 'package:lome/utils/app_constants.dart';
+import 'package:lome/widgets/app_network_image.dart';
 
 class MessageDetailPage extends StatefulWidget {
   final Message message;
@@ -279,7 +280,7 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
               child: InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 4.0,
-                child: Image.network(
+                child: AppNetworkImage(
                   imageUrl,
                   fit: BoxFit.contain,
                   errorBuilder: (ctx, error, stack) {
@@ -474,7 +475,7 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
                         onTap: () => _showImagePreview(img),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
+                          child: AppNetworkImage(
                             img,
                             width: 100,
                             height: 100,
