@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lome/services/auth_service.dart';
 import 'package:lome/services/letter_store.dart';
+import 'package:lome/widgets/envelope_template.dart';
 
 class MyLettersPage extends StatefulWidget {
   const MyLettersPage({super.key, this.receivedOnly = false});
@@ -20,8 +21,6 @@ class _MyLettersPageState extends State<MyLettersPage> {
   static const Color _inkGreen = Color(0xFF7F9A5E);
   static const Color _titleGreen = Color(0xFF9DBF8C);
   static const Color _softText = Color(0xFF8FA57F);
-  static const Color _paper = Color(0xFFFFFDF6);
-  static const Color _noteYellow = Color(0xFFFFF3C4);
 
   List<Letter> _letters = <Letter>[];
 
@@ -450,29 +449,15 @@ class _MyLettersPageState extends State<MyLettersPage> {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: _paper,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _inkGreen.withOpacity(0.18),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-              ),
               Positioned.fill(
-                child: CustomPaint(
-                  painter: _EnvelopePainter(
-                    color: _inkGreen.withOpacity(0.10),
-                    lineColor: _inkGreen.withOpacity(0.35),
-                  ),
+                child: EnvelopeTemplate(
+                  borderRadius: 18,
+                  shadowColor: _inkGreen.withOpacity(0.18),
+                  child: const SizedBox.expand(),
                 ),
               ),
               Align(
-                alignment: const Alignment(0, 0.34),
+                alignment: const Alignment(0, -0.14),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -520,25 +505,12 @@ class _MyLettersPageState extends State<MyLettersPage> {
                 ),
               ),
               Positioned(
-                right: 12,
-                top: -14,
-                child: Transform.rotate(
-                  angle: 0.14,
-                  child: Container(
-                    width: 72,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: _noteYellow,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: _inkGreen.withOpacity(0.35)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _inkGreen.withOpacity(0.12),
-                          blurRadius: 6,
-                          offset: const Offset(2, 3),
-                        ),
-                      ],
-                    ),
+                right: 10,
+                top: 10,
+                child: SizedBox(
+                  width: 54,
+                  height: 72,
+                  child: StampTemplate(
                     child: _buildStampContent(letter, stage),
                   ),
                 ),
@@ -555,14 +527,11 @@ class _MyLettersPageState extends State<MyLettersPage> {
         stage == LetterStage.opened && letter.images.isNotEmpty;
     if (showImage) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(3),
-        child: Padding(
-          padding: const EdgeInsets.all(3),
-          child: Image.network(
-            letter.images.first,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _buildStampIcon(),
-          ),
+        borderRadius: BorderRadius.circular(2),
+        child: Image.network(
+          letter.images.first,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildStampIcon(),
         ),
       );
     }
@@ -573,8 +542,8 @@ class _MyLettersPageState extends State<MyLettersPage> {
     return Center(
       child: Icon(
         Icons.photo_size_select_large_outlined,
-        size: 20,
-        color: _inkGreen.withOpacity(0.55),
+        size: 18,
+        color: _inkGreen.withOpacity(0.35),
       ),
     );
   }
@@ -1459,53 +1428,5 @@ class _SnapshotSheet extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _EnvelopePainter extends CustomPainter {
-  _EnvelopePainter({required this.color, required this.lineColor});
-
-  final Color color;
-  final Color lineColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(18));
-    canvas.save();
-    canvas.clipRRect(rrect);
-
-    final flapHeight = size.height * 0.55;
-    final flapPath = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width / 2, flapHeight)
-      ..lineTo(size.width, 0);
-
-    canvas.drawPath(flapPath, Paint()..color = color);
-
-    final linePaint = Paint()
-      ..color = lineColor
-      ..strokeWidth = 1.2
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawLine(Offset(0, 0), Offset(size.width / 2, flapHeight), linePaint);
-    canvas.drawLine(
-      Offset(size.width, 0),
-      Offset(size.width / 2, flapHeight),
-      linePaint,
-    );
-
-    final bottomPath = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(size.width / 2, size.height * 0.42)
-      ..lineTo(size.width, size.height);
-    canvas.drawPath(bottomPath, Paint()..color = color.withOpacity(0.5));
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _EnvelopePainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.lineColor != lineColor;
   }
 }
