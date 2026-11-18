@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lome/pages/my_letters_page.dart';
 import 'package:lome/services/letter_store.dart';
+import 'package:lome/widgets/envelope_template.dart';
 
 class EnvelopePreviewPage extends StatefulWidget {
   const EnvelopePreviewPage({
@@ -252,49 +253,26 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFDF6),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                  ),
                   Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: CustomPaint(
-                        painter: EnvelopeFlapPainter(),
-                      ),
+                    child: EnvelopeTemplate(
+                      borderRadius: 18,
+                      shadowColor: Colors.black.withOpacity(0.06),
+                      child: const SizedBox.expand(),
                     ),
                   ),
                   Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
+                    top: 10,
+                    right: 10,
+                    child: SizedBox(
                       width: 54,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: _noteYellow,
-                        border: Border.all(
-                          color: const Color(0xFFE0D0A0),
-                          width: 1.5,
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(18),
-                          bottomLeft: Radius.circular(8),
-                        ),
+                      height: 72,
+                      child: StampTemplate(
+                        child: _buildStampContent(stage),
                       ),
-                      child: _buildStampContent(stage),
                     ),
                   ),
                   Align(
-                    alignment: const Alignment(0, 0.42),
+                    alignment: const Alignment(0, -0.20),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -348,17 +326,11 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
     final showImage = stage != LetterStage.inTransit && _letter.images.isNotEmpty;
     if (showImage) {
       return ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(16),
-          bottomLeft: Radius.circular(6),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(3),
-          child: Image.network(
-            _letter.images.first,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _buildStampIcon(),
-          ),
+        borderRadius: BorderRadius.circular(2),
+        child: Image.network(
+          _letter.images.first,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildStampIcon(),
         ),
       );
     }
@@ -369,8 +341,8 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
     return Center(
       child: Icon(
         Icons.photo_size_select_large_outlined,
-        size: 20,
-        color: _inkGreen.withOpacity(0.5),
+        size: 18,
+        color: _inkGreen.withOpacity(0.35),
       ),
     );
   }
@@ -799,29 +771,4 @@ class _PreviewSnapshotSheet extends StatelessWidget {
       ),
     );
   }
-}
-
-class EnvelopeFlapPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFE8E8E8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    final path = Path();
-    path.moveTo(0, 0);
-    path.lineTo(size.width / 2, size.height * 0.4);
-    path.lineTo(size.width, 0);
-
-    path.moveTo(0, size.height);
-    path.lineTo(size.width * 0.3, size.height * 0.7);
-    path.moveTo(size.width, size.height);
-    path.lineTo(size.width * 0.7, size.height * 0.7);
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
