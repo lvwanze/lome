@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:lome/services/api_service.dart';
 import 'package:lome/widgets/app_network_image.dart';
@@ -22,8 +21,6 @@ class _AddRecordPageState extends State<AddRecordPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   List<Uint8List> _imageBytes = [];
-  // 编辑已有规划时回填的服务端图片 URL（临时/永久链接均可直接展示），
-  // 保存时与本次新选的图片合并回传，避免被只传新图的列表覆盖丢失。
   List<String> _existingImageUrls = [];
   final int _maxImages = 4;
   bool _isSaving = false;
@@ -43,10 +40,11 @@ class _AddRecordPageState extends State<AddRecordPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.existingPlan != null) {
-      _titleController.text = widget.existingPlan?['title'] ?? '';
-      _contentController.text = widget.existingPlan?['content'] ?? '';
-      _existingImageUrls = (widget.existingPlan?['images'] as List? ?? [])
+    // 修复：使用 existingRecord
+    if (widget.existingRecord != null) {
+      _titleController.text = widget.existingRecord?['title'] ?? '';
+      _contentController.text = widget.existingRecord?['content'] ?? '';
+      _existingImageUrls = (widget.existingRecord?['images'] as List? ?? [])
           .map((e) => e.toString())
           .where((e) => e.isNotEmpty)
           .toList();
@@ -151,8 +149,8 @@ class _AddRecordPageState extends State<AddRecordPage> {
     );
   }
 
-  // ============ 保存 ============
-  Future<void> _savePlan() async {
+  // ============ 保存记录 ============
+  Future<void> _saveRecord() async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
 
@@ -170,14 +168,12 @@ class _AddRecordPageState extends State<AddRecordPage> {
     setState(() => _isSaving = true);
 
     try {
-      final title = _titleController.text.trim();
-      final content = _contentController.text.trim();
       final isEdit = widget.existingRecord != null;
 
-      // ============ 2. 保存规划（含图片URL） ============
-      // 已有图片的 URL 原样保留 + 新上传图片的 fileId，一起覆盖回传；
-      // 服务端读取时非 cloud:// 的历史链接会原样返回（见 common.js fillImageUrls）
-      final isEdit = widget.existingPlan != null;
+      // 待补充：如果有图片上传逻辑，把新选的图片上传后获得 URL，存入 imageUrls
+      // 目前暂定为空数组，防止报错
+      List<String> imageUrls = [];
+
       final response = await ApiService.post(
         isEdit ? '/api/v1/record/update' : '/api/v1/record/create',
         body: isEdit
@@ -191,7 +187,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
                 'date': _formatDateKey(widget.selectedDate),
                 'title': title,
                 'content': content,
-                'images': [],
+                'images': imageUrls,
                 'mood': 'happy',
               },
       );
@@ -224,10 +220,10 @@ class _AddRecordPageState extends State<AddRecordPage> {
       print('【记录】保存异常: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('网络异常，请稍后再试'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -475,7 +471,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
                       shadowColor: Colors.black12,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                     ),
-                    onPressed: _isSaving ? null : _saveRecord,
+                    onPressed: _isSaving ? null : _saveRecord, // 修复：对齐方法名
                     child: _isSaving
                         ? const SizedBox(
                             width: 24,

@@ -2,10 +2,16 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lome/pages/envelope_preview_page.dart';
-import 'package:lome/pages/my_letters_page.dart';
 import 'package:lome/services/auth_service.dart';
 import 'package:lome/services/letter_store.dart';
+
+// 引入队友写的列表页和预览页
+import 'package:lome/pages/envelope_preview_page.dart';
+import 'package:lome/pages/my_letters_page.dart';
+
+// 引入你的两个页面
+import 'package:lome/pages/slow_letter_open_page.dart';
+import 'package:lome/pages/slow_letter_editor_page.dart';
 
 class SlowMessageHomePage extends StatefulWidget {
   const SlowMessageHomePage({super.key});
@@ -63,6 +69,7 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
     action();
   }
 
+  // ============ 跳转队友的列表页 ============
   void _openLetters({required bool receivedOnly}) {
     _onTapWithHaptic(() {
       Navigator.push(
@@ -72,6 +79,49 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
         ),
       ).then((_) => _loadLetters());
     });
+  }
+
+  // ============ 跳转队友的预览页（用于查看特定信件） ============
+  Future<void> _openSnapshot(Letter letter) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EnvelopePreviewPage(
+          letter: letter,
+          recipient: _partnerName,
+          onOpened: (_) => _loadLetters(),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    _loadLetters();
+  }
+
+  // ============ 跳转你的编辑器页面 ============
+  Future<void> _navigateToEditor({Map<String, dynamic>? existingRecord}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SlowLetterEditorPage(),
+      ),
+    );
+    if (mounted) _loadLetters();
+  }
+
+  // ============ 跳转你的开信页面 ============
+  Future<void> _navigateToOpenLetter(Letter letter) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SlowLetterOpenPage(
+          letterNo: letter.code,
+          title: letter.title,
+          content: letter.content,
+          recipientLabel: _partnerName,
+        ),
+      ),
+    );
+    if (mounted) _loadLetters();
   }
 
   String _formatDate(DateTime value) {
@@ -129,8 +179,7 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
                                 hint: partnerInTransit.isEmpty
                                     ? '暂时没有在路上的信'
                                     : '最近一封 ${_formatDate(partnerInTransit.first.deliverAt)} 送达',
-                                onTap: () =>
-                                    _openLetters(receivedOnly: true),
+                                onTap: () => _openLetters(receivedOnly: true), // 👈 恢复队友的列表页
                               ),
                               _buildListDivider(),
                               _buildListTile(
@@ -139,8 +188,7 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
                                 hint: partnerHistory.isEmpty
                                     ? '还没有收到的信'
                                     : '最近一封 ${_formatDate(partnerHistory.first.deliverAt)} 已到达',
-                                onTap: () =>
-                                    _openLetters(receivedOnly: true),
+                                onTap: () => _openLetters(receivedOnly: true), // 👈 恢复队友的列表页
                               ),
                             ],
                           ),
@@ -156,8 +204,7 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
                                 hint: myInTransit.isEmpty
                                     ? '还没有寄出的信'
                                     : '还有 ${_remaining(myInTransit.first.deliverAt)} 到达',
-                                onTap: () =>
-                                    _openLetters(receivedOnly: false),
+                                onTap: () => _openLetters(receivedOnly: false), // 👈 恢复队友的列表页
                               ),
                               _buildListDivider(),
                               _buildListTile(
@@ -166,8 +213,7 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
                                 hint: myHistory.isEmpty
                                     ? '还没有寄出的信'
                                     : '共 ${myHistory.length} 封已到达',
-                                onTap: () =>
-                                    _openLetters(receivedOnly: false),
+                                onTap: () => _openLetters(receivedOnly: false), // 👈 恢复队友的列表页
                               ),
                             ],
                           ),
@@ -462,7 +508,8 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
     final isInTransit = stage == LetterStage.inTransit;
 
     return GestureDetector(
-      onTap: () => _onTapWithHaptic(() => _openSnapshot(latest)),
+      // ============ 点击大卡片，跳转你的开信页面 ============
+      onTap: () => _onTapWithHaptic(() => _navigateToOpenLetter(latest)),
       child: Container(
         padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
         decoration: BoxDecoration(
@@ -565,24 +612,10 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
     );
   }
 
-  Future<void> _openSnapshot(Letter letter) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EnvelopePreviewPage(
-          letter: letter,
-          recipient: _partnerName,
-          onOpened: (_) => _loadLetters(),
-        ),
-      ),
-    );
-    if (!mounted) return;
-    _loadLetters();
-  }
-
+  // ============ 写一封信按钮直接跳转你的编辑页 ============
   Widget _buildWriteLetterButton() {
     return GestureDetector(
-      onTap: () => _onTapWithHaptic(_showComposeSheet),
+      onTap: () => _onTapWithHaptic(() => _navigateToEditor()),
       child: Container(
         width: 190,
         height: 50,
@@ -613,39 +646,6 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Future<void> _showComposeSheet() async {
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _ComposeSheet(),
-    );
-    if (result == null || !mounted) return;
-
-    final days = result['days'] as int;
-    final now = DateTime.now();
-    final letter = Letter(
-      id: 'letter-${now.millisecondsSinceEpoch}',
-      code: 'N${(_letters.length + 1)}',
-      title: result['title'] as String,
-      content: result['content'] as String,
-      sentAt: now,
-      deliverAt: now.add(Duration(days: days)),
-    );
-
-    final updated = await LetterStore.add(letter);
-    if (!mounted) return;
-    setState(() => _letters = updated);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('信已寄出，将在 $days 天后送达'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: _inkGreen.withOpacity(0.92),
       ),
     );
   }
@@ -713,264 +713,6 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ComposeSheet extends StatefulWidget {
-  const _ComposeSheet();
-
-  @override
-  State<_ComposeSheet> createState() => _ComposeSheetState();
-}
-
-class _ComposeSheetState extends State<_ComposeSheet> {
-  static const int _maxLength = 1000;
-
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
-  int _days = 3;
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _contentController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomInset * 0.2),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.88,
-              ),
-              padding: const EdgeInsets.fromLTRB(22, 16, 22, 20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFDF6).withOpacity(0.97),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: const Color(0xFF7F9A5E).withOpacity(0.25),
-                ),
-              ),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF7F9A5E).withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      '写一封信',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF7F9A5E),
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    _buildField(
-                      controller: _titleController,
-                      hint: '给这封信一个标题',
-                      maxLength: 30,
-                      maxLines: 1,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      controller: _contentController,
-                      hint: '写下想说的话，它会慢慢走到 ta 身边…',
-                      maxLength: _maxLength,
-                      maxLines: 8,
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      '路上要走多久',
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 1,
-                        color: const Color(0xFF7F9A5E).withOpacity(0.85),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: List.generate(3, (i) {
-                        final days = <int>[1, 3, 7][i];
-                        final selected = _days == days;
-                        return Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(left: i == 0 ? 0 : 8),
-                            child: GestureDetector(
-                              onTap: () => setState(() => _days = days),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 11),
-                                decoration: BoxDecoration(
-                                  color: selected
-                                      ? const Color(0xFF9DBF8C)
-                                      : Colors.white.withOpacity(0.7),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: const Color(0xFF7F9A5E)
-                                        .withOpacity(selected ? 0.0 : 0.22),
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '$days 天',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: selected
-                                          ? Colors.white
-                                          : const Color(0xFF7F9A5E),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 20),
-                    GestureDetector(
-                      onTap: _submit,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF9DBF8C),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color:
-                                  const Color(0xFF7F9A5E).withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Text(
-                            '寄出这封信',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildField({
-    required TextEditingController controller,
-    required String hint,
-    required int maxLength,
-    required int maxLines,
-  }) {
-    return TextField(
-      controller: controller,
-      maxLength: maxLength,
-      maxLines: maxLines,
-      style: const TextStyle(
-        fontSize: 13.5,
-        height: 1.8,
-        color: Color(0xFF7B8A74),
-      ),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(
-          fontSize: 12.5,
-          color: const Color(0xFF8FA57F).withOpacity(0.7),
-        ),
-        counterStyle: TextStyle(
-          fontSize: 10,
-          color: const Color(0xFF8FA57F).withOpacity(0.6),
-        ),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.7),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: const Color(0xFF7F9A5E).withOpacity(0.2),
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: const Color(0xFF7F9A5E).withOpacity(0.2),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: const Color(0xFF9DBF8C).withOpacity(0.8),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _submit() {
-    final title = _titleController.text.trim();
-    final content = _contentController.text.trim();
-    if (title.isEmpty) {
-      _toast('先给这封信写个标题吧');
-      return;
-    }
-    if (content.isEmpty) {
-      _toast('信里总要写点什么');
-      return;
-    }
-    Navigator.pop(context, <String, dynamic>{
-      'title': title,
-      'content': content,
-      'days': _days,
-    });
-  }
-
-  void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF7F9A5E).withOpacity(0.92),
       ),
     );
   }
