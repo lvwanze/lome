@@ -10,13 +10,13 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # 云开发相关（已全部移除，改用 AuthService 直连云函数）
   cupertino_icons: ^1.0.8
   http: ^1.2.0
   shared_preferences: ^2.2.2
   google_fonts: ^6.2.1
   flutter_dotenv: ^5.1.0
-  image_picker: ^0.8.7   # ← 添加这一行
+  image_picker: ^1.1.0
+  flutter_secure_storage: ^10.3.4
 
 dev_dependencies:
   flutter_test:

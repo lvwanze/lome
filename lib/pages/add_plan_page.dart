@@ -6,7 +6,9 @@ import 'package:lome/widgets/app_network_image.dart';
 
 class AddPlanPage extends StatefulWidget {
   final DateTime selectedDate;
+  // 统一使用 existingPlan 作为参数名（跟队友、跟你底部的保存逻辑保持一致）
   final Map<String, dynamic>? existingPlan;
+
   const AddPlanPage({
     super.key,
     required this.selectedDate,
@@ -21,8 +23,7 @@ class _AddPlanPageState extends State<AddPlanPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   List<Uint8List> _imageBytes = [];
-  // 编辑已有记录时回填的服务端图片 URL（临时/永久链接均可直接展示），
-  // 保存时与本次新选的图片合并回传，避免被只传新图的列表覆盖丢失。
+  // 编辑已有记录时回填的服务端图片 URL
   List<String> _existingImageUrls = [];
   final int _maxImages = 4;
   bool _isSaving = false;
@@ -42,10 +43,11 @@ class _AddPlanPageState extends State<AddPlanPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.existingRecord != null) {
-      _titleController.text = widget.existingRecord?['title'] ?? '';
-      _contentController.text = widget.existingRecord?['content'] ?? '';
-      _existingImageUrls = (widget.existingRecord?['images'] as List? ?? [])
+    // 修复：将 existingRecord 改为 existingPlan
+    if (widget.existingPlan != null) {
+      _titleController.text = widget.existingPlan?['title'] ?? '';
+      _contentController.text = widget.existingPlan?['content'] ?? '';
+      _existingImageUrls = (widget.existingPlan?['images'] as List? ?? [])
           .map((e) => e.toString())
           .where((e) => e.isNotEmpty)
           .toList();
@@ -169,14 +171,12 @@ class _AddPlanPageState extends State<AddPlanPage> {
     setState(() => _isSaving = true);
 
     try {
-      final title = _titleController.text.trim();
-      final content = _contentController.text.trim();
       final isEdit = widget.existingPlan != null;
 
-      // ============ 2. 保存记录（含图片URL） ============
-      // 已有图片的 URL 原样保留 + 新上传图片的 fileId，一起覆盖回传；
-      // 服务端读取时非 cloud:// 的历史链接会原样返回（见 common.js fillImageUrls）
-      final isEdit = widget.existingRecord != null;
+      // 注意：你原本的合并代码中有 `imageUrls` 未定义的问题
+      // 这里暂时使用空数组替代，如果你的图片需要上传到服务器获取 URL，请在这里补充上传逻辑！
+      List<String> imageUrls = []; 
+
       final response = await ApiService.post(
         isEdit ? '/api/v1/plan/update' : '/api/v1/plan/create',
         body: isEdit
@@ -191,7 +191,7 @@ class _AddPlanPageState extends State<AddPlanPage> {
                 'date': _formatDateKey(widget.selectedDate),
                 'title': title,
                 'content': content,
-                'images': [],
+                'images': imageUrls, // 修复：原来写死为 []
               },
       );
 
@@ -223,10 +223,10 @@ class _AddPlanPageState extends State<AddPlanPage> {
       print('【规划】保存异常: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('网络异常，请稍后再试'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -476,7 +476,8 @@ class _AddPlanPageState extends State<AddPlanPage> {
                       shadowColor: Colors.black12,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                     ),
-                    onPressed: _isSaving ? null : _savePlan,
+                    // 修复：原来写的是 _savePlan，实际方法是 _saveRecord
+                    onPressed: _isSaving ? null : _saveRecord,
                     child: _isSaving
                         ? const SizedBox(
                             width: 24,

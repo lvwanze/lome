@@ -4,7 +4,7 @@ import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/bind_success_page.dart';
 import 'package:lome/pages/calendar_home_page.dart';
-
+import 'pages/slow_letter_editor_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +29,8 @@ class LomeApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/home': (context) => const HomePage(),
         '/calendar': (context) => const CalendarPage(),
+        '/slow-letter-editor': (context) =>
+    const SlowLetterEditorPage(),
         '/bind_success': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as String?;
           return BindSuccessPage(partnerNickname: args ?? '伴侣');

@@ -58,27 +58,30 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
   void _startAnimations() async {
     setState(() => _animationStep = 0);
     await Future.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
 
     setState(() => _animationStep = 1);
     await Future.delayed(const Duration(milliseconds: 1200));
+    if (!mounted) return;
 
     setState(() => _animationStep = 2);
     await Future.delayed(const Duration(milliseconds: 1200));
+    if (!mounted) return;
 
     setState(() => _animationStep = 3);
   }
 
-   @override
+  @override
   void dispose() {
     _bindCodeController.dispose();
-    _pageController.dispose();   // ← 新增
+    _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-            body: PageView(
+      body: PageView(
         controller: _pageController,
         scrollBehavior: ScrollConfiguration.of(context).copyWith(
           dragDevices: const {
@@ -113,9 +116,8 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
   Widget _buildPage(GuidePageData data, int index) {
     final bgImage = 'assets/images/welcome_bg_${index + 1}.png';
     final isSuccess = data.isSuccessPage && _showSuccessPage;
-    final displaySubtitle = isSuccess
-        ? '你和 $_partnerNickname 成为了伴侣'
-        : data.subtitle;
+    final displaySubtitle =
+        isSuccess ? '你和 $_partnerNickname 成为了伴侣' : data.subtitle;
 
     return Container(
       width: double.infinity,
@@ -124,7 +126,9 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
         image: DecorationImage(
           image: AssetImage(bgImage),
           fit: BoxFit.cover,
-          alignment: imageAlignment,
+          // 修复：原代码在这里使用了未定义的 imageAlignment
+          // 通常背景图居中对齐即可，如果需要特殊对齐，请改为 Alignment.topCenter 等
+          alignment: Alignment.center,
         ),
       ),
       child: SafeArea(
@@ -187,7 +191,7 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              '与你喜欢的人，共同开启这段旅程',
+                              displaySubtitle,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 15,
@@ -661,16 +665,14 @@ class _WelcomeGuidePageState extends State<WelcomeGuidePage> {
     setState(() => _isBinding = true);
     try {
       final result = await AuthService().useBindCode(code);
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BindSuccessPage(
-              partnerNickname: result['partnerNickname']!,
-            ),
-          ),
-        );
-      }
+      if (!mounted) return;
+
+      // 修复：原代码在这里直接 pushReplacement，导致 ProfilePage 的 _goToBind 等不到返回值。
+      // 这里先 pop 回 ProfilePage，带上成功数据，由父页面去处理跳转 BindSuccessPage。
+      Navigator.pop(context, {
+        'success': true,
+        'partnerNickname': result['partnerNickname'] ?? 'TA',
+      });
     } catch (e) {
       if (mounted) {
         setState(() => _isBinding = false);

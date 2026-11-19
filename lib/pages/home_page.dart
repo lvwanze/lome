@@ -6,15 +6,15 @@ import 'package:lome/models/user_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lome/pages/Profile_Page.dart';
 import 'package:lome/pages/settings_page.dart';
-import 'package:lome/pages/calendar_home_page.dart';
+import 'package:lome/pages/calendar_home_page.dart'; // 导入日历页
 import 'package:lome/pages/message_board_page.dart';
-import 'package:lome/pages/slow_message_home_page.dart'; // ✅ 引入慢信主页
+import 'package:lome/pages/slow_message_home_page.dart'; // 导入慢信主页
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   // 退出登录弹窗
-// ignore: unused_element
+  // ignore: unused_element
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -35,7 +35,10 @@ class HomePage extends StatefulWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text("取消", style: TextStyle(color: Colors.grey[500])),
+            child: Text(
+              "取消",
+              style: TextStyle(color: Colors.grey[500]),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -46,7 +49,10 @@ class HomePage extends StatefulWidget {
               Navigator.pop(ctx);
               Navigator.pushReplacementNamed(context, '/login');
             },
-            child: const Text("退出登录", style: TextStyle(color: Colors.white)),
+            child: const Text(
+              "退出登录",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -59,7 +65,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   User? _user;
-  // ignore: unused_field
   bool _isLoading = true;
   int _selectedTab = 0;
   double _infoEntryScale = 1.0;
@@ -84,6 +89,9 @@ class _HomePageState extends State<HomePage> {
     setState(() => _isLoading = true);
     try {
       final user = await AuthService().getUserInfo();
+      print('📦 昵称: ${user.nickname}');
+      print('📦 绑定状态: ${user.isBound}');
+      print('📦 伴侣昵称: ${user.partnerNickname}');
       if (mounted) {
         setState(() {
           _user = user;
@@ -113,42 +121,27 @@ class _HomePageState extends State<HomePage> {
         child: SafeArea(
           child: Stack(
             children: [
-              // ✅ 修复核心：使用 Column 加 Expanded 解决溢出
-              Column(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 16.0 : 100.0,
-                        ),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 40),
-                            _buildUserCard(isSmallScreen),
-                            const SizedBox(height: 20),
-                            _buildDivider(isSmallScreen),
-                            const SizedBox(height: 20),
-                            _buildCloudButtons(isSmallScreen),
-                            // 底部留白，防止内容贴底
-                            const SizedBox(height: 60),
-                          ],
-                        ),
-                      ),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 16.0 : 100.0,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      children: [
+                        const SizedBox(height: 40),
+                        _buildUserCard(isSmallScreen),
+                        const SizedBox(height: 20),
+                        _buildDivider(isSmallScreen),
+                        const SizedBox(height: 20),
+                        _buildCloudButtons(isSmallScreen),
+                      ],
                     ),
-                  ),
-                  // 底部导航固定在底部
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 16.0 : 100.0,
-                      vertical: 10.0,
-                    ),
-                    child: _buildBottomNavigation(isSmallScreen),
-                  ),
-                ],
+                    _buildBottomNavigation(isSmallScreen),
+                  ],
+                ),
               ),
-              // ✅ 聊天悬浮按钮：移出绝对定位的坑
               _buildChatEntry(isSmallScreen),
             ],
           ),
@@ -157,28 +150,18 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ============================================================
-  // 统一缩放基准：窄屏以 430 为基准，宽屏以 1340 为基准
-  // ============================================================
-  double _scaleOf(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width < 600) return (width / 430.0).clamp(0.86, 1.2);
-    return width / 1340.0;
-  }
-
-  // ============================================================
-  // 1. 顶部用户卡片
-  // ============================================================
   Widget _buildUserCard(bool isSmallScreen) {
-    final s = _scaleOf(context);
+    const baseWidth = 1340.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scaleFactor = screenWidth / baseWidth;
 
-    final cardWidth = (isSmallScreen ? 330.0 : 550.0) * s;
-    final cardHeight = (isSmallScreen ? 88.0 : 180.0) * s;
-    final cardY = (isSmallScreen ? 8.0 : 10.0) * s;
+    final cardWidth = 550.0 * scaleFactor;
+    final cardHeight = 180.0 * scaleFactor;
+    final cardX = 10.0 * scaleFactor;
+    final cardY = 10.0 * scaleFactor;
 
-    final avatarSize = (isSmallScreen ? 56.0 : 90.0) * s;
-    final fontSize = (isSmallScreen ? 19.0 : 26.0) * s;
-    final settingsSize = (isSmallScreen ? 44.0 : 54.0) * s;
+    final avatarSize = 90.0;
+    final fontSize = isSmallScreen ? 18.0 : 26.0;
 
     return Padding(
       padding: EdgeInsets.only(top: cardY),
@@ -187,7 +170,7 @@ class _HomePageState extends State<HomePage> {
         child: Stack(
           children: [
             Positioned(
-              left: 0,
+              left: cardX,
               child: _buildUserInfoEntry(
                 cardWidth: cardWidth,
                 cardHeight: cardHeight,
@@ -196,9 +179,9 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             Positioned(
-              right: 0,
-              top: (cardHeight - settingsSize) / 2,
-              child: _buildSettingsButton(size: settingsSize),
+              right: isSmallScreen ? 16 : 40,
+              top: (cardHeight - avatarSize * 0.7) / 2,
+              child: _buildSettingsButton(avatarSize: avatarSize),
             ),
           ],
         ),
@@ -209,7 +192,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildDivider(bool isSmallScreen) {
     return Center(
       child: Container(
-        width: isSmallScreen ? double.infinity : 1600.0,
+        width: isSmallScreen ? 400.0 : 1600.0,
         height: 10.0,
         decoration: BoxDecoration(
           color: const Color(0xFFAFC5AE).withOpacity(0.3),
@@ -219,9 +202,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ============================================================
-  // 2. 用户信息入口
-  // ============================================================
   Widget _buildUserInfoEntry({
     required double cardWidth,
     required double cardHeight,
@@ -237,13 +217,11 @@ class _HomePageState extends State<HomePage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ProfilePage(isBound: _user?.isBound ?? false),
+              builder: (_) => ProfilePage(
+                isBound: _user?.isBound ?? false,
+              ),
             ),
-          ).then((result) {
-            if (result == true) {
-              _loadUserData();
-            }
-          });
+          );
         });
       },
       child: AnimatedScale(
@@ -257,7 +235,10 @@ class _HomePageState extends State<HomePage> {
             child: Container(
               width: cardWidth,
               height: cardHeight,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 12,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(100),
@@ -305,10 +286,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ============================================================
-  // 3. 设置按钮
-  // ============================================================
-  Widget _buildSettingsButton({required double size}) {
+  Widget _buildSettingsButton({required double avatarSize}) {
     return GestureDetector(
       onTapDown: (_) => setState(() => _settingsScale = 0.92),
       onTapUp: (_) => setState(() => _settingsScale = 1.0),
@@ -326,8 +304,8 @@ class _HomePageState extends State<HomePage> {
         curve: Curves.elasticOut,
         scale: _settingsScale,
         child: Container(
-          width: size,
-          height: size,
+          width: avatarSize * 0.6,
+          height: avatarSize * 0.6,
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.08),
             shape: BoxShape.circle,
@@ -336,72 +314,64 @@ class _HomePageState extends State<HomePage> {
               width: 0.5,
             ),
           ),
-          child: Center(
-            child: Image.asset(
-              'assets/images/settings_icon.png',
-              width: size * 0.72,
-              height: size * 0.72,
-              fit: BoxFit.contain,
-            ),
+          child: Image.asset(
+            'assets/images/settings_icon.png',
+            width: avatarSize * 0.8,
+            height: avatarSize * 0.8,
+            fit: BoxFit.contain,
           ),
         ),
       ),
     );
   }
 
-  // ============================================================
-  // 5. 云朵互动按钮
-  // ============================================================
   Widget _buildCloudButtons(bool isSmallScreen) {
-    final s = _scaleOf(context);
+    const baseWidth = 1340.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scaleFactor = screenWidth / baseWidth;
 
-    final buttonWidth = (isSmallScreen ? 118.0 : 260.0) * s;
-    final buttonHeight = buttonWidth * 0.54;
-    final fontSize = (isSmallScreen ? 17.0 : 36.0) * s;
-    final switchSize = (isSmallScreen ? 42.0 : 56.0) * s;
+    final buttonWidth = 260.0 * scaleFactor;
+    final buttonHeight = 140.0 * scaleFactor;
+    final fontSize = 36.0 * scaleFactor;
 
-    final interactions = <Map<String, dynamic>>[
-      {'label': '干杯', 'image': 'assets/images/button_cloud.png', 'x': 0.03, 'y': 0.14},
-      {'label': '抱抱', 'image': 'assets/images/button_cloud.png', 'x': 0.26, 'y': 0.66},
-      {'label': '贴贴', 'image': 'assets/images/button_cloud.png', 'x': 0.60, 'y': 0.36},
+    final interactions = [
+      {'label': '干杯', 'image': 'assets/images/button_cloud.png', 'x': 0.05, 'y': 0.20},
+      {'label': '抱抱', 'image': 'assets/images/button_cloud.png', 'x': 0.30, 'y': 0.80},
+      {'label': '贴贴', 'image': 'assets/images/button_cloud.png', 'x': 0.60, 'y': 0.50},
     ];
 
-    final areaHeight = (isSmallScreen ? 380.0 : 580.0) * _scaleOf(context);
+    const double areaSize = 580;
 
     return SizedBox(
-      height: areaHeight,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final areaWidth = constraints.maxWidth;
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              ...interactions.map((item) {
-                return Positioned(
-                  left: (item['x'] as double) * areaWidth,
-                  top: (item['y'] as double) * areaHeight,
-                  child: CloudButton(
-                    label: item['label'] as String,
-                    image: item['image'] as String,
-                    width: buttonWidth,
-                    height: buttonHeight,
-                    fontSize: fontSize,
-                  ),
-                );
-              }),
-              Positioned(
-                left: areaWidth * 0.5 - switchSize / 2,
-                top: areaHeight - switchSize - 4,
-                child: _buildSwitchAvatarButton(switchSize),
+      height: areaSize,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ...interactions.map((item) {
+            return Positioned(
+              left: (item['x'] as double) * areaSize,
+              top: (item['y'] as double) * areaSize,
+              child: CloudButton(
+                label: item['label'] as String,
+                image: item['image'] as String,
+                width: buttonWidth,
+                height: buttonHeight,
+                fontSize: fontSize,
               ),
-            ],
-          );
-        },
+            );
+          }).toList(),
+          Positioned(
+            left: 0.34 * areaSize,
+            top: 0.94 * areaSize,
+            child: _buildSwitchAvatarButton(isSmallScreen),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSwitchAvatarButton(double buttonSize) {
+  Widget _buildSwitchAvatarButton(bool isSmallScreen) {
+    final buttonSize = isSmallScreen ? 40.0 : 56.0;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _avatarSwitchScale = 0.85),
@@ -449,17 +419,23 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ============================================================
-  // 7. 聊天入口按钮 (✅ 修复：改为使用 Align 或 Positioned 且不超出屏幕边界)
-  // ============================================================
   Widget _buildChatEntry(bool isSmallScreen) {
-    final entryWidth = (isSmallScreen ? 76.0 : 110.0) * _scaleOf(context);
-    final entryHeight = entryWidth * 1.35;
+    const baseWidth = 1340.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scaleFactor = screenWidth / baseWidth;
 
-    // 固定在右侧偏上的位置
+    final entryHeight = 155.0 * scaleFactor;
+    final entryX = 850.0 * scaleFactor;
+    final entryY = 541.0 * scaleFactor;
+
+    final entryWidth = 150.0 * scaleFactor;
+    final scale = 1.2;
+    final maxWidth = MediaQuery.of(context).size.width * 0.4;
+    final finalWidth = entryWidth > maxWidth ? maxWidth : entryWidth;
+
     return Positioned(
-      right: isSmallScreen ? 10 : 30,
-      top: MediaQuery.of(context).size.height * 0.45, // 屏幕中间偏上
+      left: entryX * scale,
+      top: entryY * scale,
       child: GestureDetector(
         onTapDown: (_) => setState(() => _chatScale = 0.92),
         onTapUp: (_) => setState(() => _chatScale = 1.0),
@@ -476,8 +452,8 @@ class _HomePageState extends State<HomePage> {
           curve: Curves.elasticOut,
           scale: _chatScale,
           child: Container(
-            width: entryWidth,
-            height: entryHeight,
+            width: finalWidth * scale,
+            height: entryHeight * scale,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.08),
@@ -497,9 +473,8 @@ class _HomePageState extends State<HomePage> {
             child: Center(
               child: Image.asset(
                 'assets/images/mess.png',
-                width: entryWidth * 0.55,
-                height: entryWidth * 0.55,
-                fit: BoxFit.contain,
+                width: entryHeight * 0.8 * scale,
+                height: entryHeight * 0.8 * scale,
               ),
             ),
           ),
@@ -508,13 +483,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ============================================================
-  // 8. 底部导航
-  // ============================================================
   Widget _buildBottomNavigation(bool isSmallScreen) {
-    final s=_scaleOf(context);
-    final iconSize= (isSmallScreen ? 32.0 : 48.0) * _scaleOf(context);
-    final fontSize = (isSmallScreen ? 12.0 : 14.0) * _scaleOf(context);
+    final iconSize = isSmallScreen ? 32.0 : 48.0;
+    final fontSize = isSmallScreen ? 12.0 : 14.0;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(100),
@@ -522,7 +493,7 @@ class _HomePageState extends State<HomePage> {
         filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: Container(
           width: double.infinity,
-          height: (isSmallScreen ? 80 : 110) * _scaleOf(context),
+          height: isSmallScreen ? 80 : 110,
           padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 20),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.08),
@@ -552,7 +523,7 @@ class _HomePageState extends State<HomePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const CalendarPage(),
+                            builder: (_) => const CalendarPage(), // 👈 改回 CalendarPage
                           ),
                         );
                         break;
@@ -564,12 +535,11 @@ class _HomePageState extends State<HomePage> {
                           ),
                         );
                         break;
-                      case 2:
-                        // ✅ 跳转慢信主页
+                      case 2: // 慢信 👈 跳转队友主页
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const SlowMessageHomePage(),
+                            builder: (_) => const SlowMessageHomePage(), 
                           ),
                         );
                         break;
@@ -584,7 +554,7 @@ class _HomePageState extends State<HomePage> {
                 child: AnimatedScale(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.elasticOut,
-                  scale: isSelected ? 1.12 : 1.0,
+                  scale: isSelected ? 1.15 : 1.0,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -593,14 +563,12 @@ class _HomePageState extends State<HomePage> {
                         width: iconSize,
                         height: iconSize,
                       ),
-                      SizedBox(height: 4*_scaleOf(context)),
+                      const SizedBox(height: 4),
                       Text(
                         _tabs[index]['label'] as String,
                         style: TextStyle(
                           fontSize: fontSize,
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.6),
+                          color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
                           letterSpacing: 1,
                         ),
                       ),
@@ -615,9 +583,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ============================================================
-  // 通用：点击弹动反馈
-  // ============================================================
   void _onTapWithHaptic(VoidCallback action) {
     if (Theme.of(context).platform == TargetPlatform.iOS ||
         Theme.of(context).platform == TargetPlatform.android) {
@@ -627,9 +592,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// ============================================================
-// CloudButton 云朵按钮组件（保持不变）
-// ============================================================
 class CloudButton extends StatefulWidget {
   final String label;
   final String image;
