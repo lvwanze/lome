@@ -130,6 +130,20 @@ test('称呼和样式永久冻结；无效称呼、样式与预期伴侣被拒�
   const sent = await service.send('a', input); await store.update('users', 'b', { nickname: '后来的昵称' });
   assert.equal((await service.content('a', { letterId: sent.letterId })).recipientLabel, '称呼b');
   assert.deepEqual((await service.send('a', input)).appearance, APPEARANCE);
+  const varied = await service.send('a', params({
+    appearance: {
+      stampId: 'stamp_sakura_v1',
+      paperId: 'paper_sky_v1',
+      sealId: 'seal_ginkgo_v1',
+      envelopeId: 'envelope_mint_v1',
+    },
+  }));
+  assert.deepEqual(varied.appearance, {
+    stampId: 'stamp_sakura_v1',
+    paperId: 'paper_sky_v1',
+    sealId: 'seal_ginkgo_v1',
+    envelopeId: 'envelope_mint_v1',
+  });
   await assert.rejects(service.send('a', params({ recipientLabel: '\n名字' })), rejectCode(12010));
   await assert.rejects(service.send('a', params({ appearance: { paperId: 'fake' } })), rejectCode(12009));
   await assert.rejects(service.send('a', params({ expectedPartnerId: 'd' })), rejectCode(7001));

@@ -1,0 +1,57 @@
+13ac1d6 | 2026-11-18 | 信封预览页与我的信件页按模板替换信封与邮票元素
+dd9a484 | 2026-11-19 | chore: 提交本地改动
+89727ba | 2026-11-12 | Feature/信封预览页与我的信件页 (#21)
+dad290f | 2026-10-26 | 慢信云函数 (#20)
+83c5931 | 2026-09-16 | fix: 修复绑定/图片/留言板等所有bug
+3495a26 | 2026-09-16 | 修复前端图片无法显示
+c294fee | 2026-09-15 | 修复日历数据越权与图片上传问题
+deedf5f | 2026-09-14 | 修复绑定问题 (#18)
+95c661d | 2026-09-10 | feat: 完善留言板功能
+c762ee9 | 2026-09-09 | fix: 恢复 message_board_page.dart
+9d9e188 | 2026-09-09 | feat: 日历和留言板功能完善
+597ad34 | 2026-09-09 | merge: 合并队友云函数代码，解决配置冲突
+fcc4140 | 2026-09-07 | Delete cloudbase/temp directory
+3cef23d | 2026-09-07 | 任务文档执行
+5fd448d | 2026-09-07 | 一些云函数
+89e599d | 2026-08-17 | feat: 完善日历模块功能
+f023b20 | 2026-08-13 | merge: 解决 home_page.dart 冲突，保留 CalendarPage
+eb753f7 | 2026-08-13 | feat:增加添加规划和添加记录页面 (#13)
+46f4b20 | 2026-07-24 | feat: 首页功能完善 + interaction 云函数
+8a5e7dd | 2026-07-24 | feat: 集成设置页和API测试页面
+d282f04 | 2026-07-24 | feat: 完成首页完整功能 (#12)
+847f3f9 | 2026-07-23 | 完成个人信息页 (#11)
+d7d6823 | 2026-07-17 | Merge pull request #9 from lvwanze/退出登录功能（单击头像触发弹窗）
+12a3201 | 2026-07-17 | Merge branch '退出登录功能（单击头像触发弹窗）' of https://github.com/lvwanze/lome into 退出登录功能（单击头像触发弹窗）
+dcdc97c | 2026-07-17 | feat:首页退出登录功能（单击头像触发退出登录窗口）
+781cdb5 | 2026-07-17 | feat:首页退出登录功能（单击头像触发退出登录窗口）
+54155ec | 2026-07-17 | fix: 兼容 isBound 字段类型（bool/string）
+23214d7 | 2026-07-17 | debug: 添加绑定码调试日志
+8231322 | 2026-07-17 | fix: 修复 useBindCode 和 unbind 云函数
+7365718 | 2026-07-17 | fix: 补充 android gradle wrapper 文件
+6d92b53 | 2026-07-17 | Merge branch 'main' of https://github.com/lvwanze/lome
+2d417b5 | 2026-07-17 | chore: 补充 gradle wrapper 文件
+55febde | 2026-07-17 | Feature/bind success page (#8)
+1887910 | 2026-07-17 | Feature/bind success page (#7)
+8790596 | 2026-07-17 | Merge branch 'feature/bind-success-page' of https://github.com/lvwanze/lome into feature/bind-success-page
+7343026 | 2026-07-17 | chore: 补充遗漏的配置文件
+6bd4b29 | 2026-07-16 | Feature/bind success page (#6)
+5055070 | 2026-07-16 | Merge branch 'main' into feature/bind-success-page
+86338ae | 2026-07-16 | feat: 新增 useBindCode 和 unbind 云函数
+83cbd88 | 2026-07-15 | Feature/bind success page (#5)
+1d7b8c6 | 2026-07-15 | feat: 精简引导页为2页 + 绑定成功页按钮修复
+2b68577 | 2026-07-15 | feat: 引导页新增绑定成功页 (#4)
+b70fca4 | 2026-07-15 | feat: 引导页新增绑定成功页
+5d319ea | 2026-07-15 | feat: 绑定引导页 (#3)
+1ac8a2c | 2026-06-26 | feat: 登录页UI  + 登录验证码后端云函数联调 (#2)
+8332379 | 2026-06-20 | 第一周任务  1-5 (#1)
+cbc8c66 | 2026-06-14 | Merge branch 'main' of https://github.com/lvwanze/lome
+2bf2b25 | 2026-05-29 | Refactor HomePage layout and update styles
+8cc41ea | 2026-05-29 | feat: 修改了主页面，Rive虚拟形象制作学习
+9cc5442 | 2026-05-25 | feat: 优化登陆页面和主页跳转
+a56b347 | 2026-05-25 | feat: 完成登录页面优化和主页跳转
+8de7856 | 2026-05-18 | feat: 完成登录页面UI和腾讯云开发配置
+c146f66 | 2026-05-18 | docs: 添加2026-05-18开发日志（腾讯云配置+登录页面）
+7904849 | 2026-05-11 | docs: 优化README.md格式
+8b32a15 | 2026-05-11 | docs: 优化开发日志可读性
+ee61f2a | 2026-05-11 | docs: 添加README
+76c8531 | 2026-05-11 | feat: 初始化Lome项目，完成启动页

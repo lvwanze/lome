@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lome/services/auth_service.dart';
 import 'package:lome/services/letter_store.dart';
+import 'package:lome/services/slow_letter_api.dart';
 
 // 引入队友写的列表页和预览页
 import 'package:lome/pages/envelope_preview_page.dart';
@@ -30,6 +31,8 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
   String _partnerName = 'Name';
   String _myName = '我';
   double _backScale = 1.0;
+  Map<String, dynamic>? _overviewCounts;
+  String? _loadError;
 
   @override
   void initState() {
@@ -39,9 +42,31 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
   }
 
   Future<void> _loadLetters() async {
-    final letters = await LetterStore.load();
-    if (!mounted) return;
-    setState(() => _letters = letters);
+    try {
+      final letters = await LetterStore.load();
+      if (!mounted) return;
+      setState(() {
+        _letters = letters;
+        _loadError = null;
+      });
+      try {
+        final overview = await SlowLetterApi.instance.overview();
+        if (mounted) {
+          setState(
+            () => _overviewCounts = overview['counts'] as Map<String, dynamic>?,
+          );
+        }
+      } catch (_) {
+        if (mounted) setState(() => _overviewCounts = null);
+      }
+    } catch (error) {
+      if (mounted) setState(() => _loadError = error.toString());
+    }
+  }
+
+  int _count(String key, int fallback) {
+    final value = _overviewCounts?[key];
+    return value is num ? value.toInt() : fallback;
   }
 
   Future<void> _loadNames() async {
@@ -81,44 +106,67 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
     });
   }
 
-  // ============ 跳转队友的预览页（用于查看特定信件） ============
-  Future<void> _openSnapshot(Letter letter) async {
+  // ============ 点击在途信件处理 ============
+  Future<void> _openLatestIncomingInTransit(List<Letter> letters) async {
+    if (letters.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('目前没有在途信件')));
+      return;
+    }
+
+    // 在途信件不应该直接打开，或者你可以引导到队友的预览页（如果是动画展示的话）
+    // 按照正常逻辑，在途信件是不能拆开的，这里建议弹提示或者跳转队友的预览页（带倒计时）
+    final letter = letters.first;
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => EnvelopePreviewPage(
-          letter: letter,
-          recipient: _partnerName,
-          onOpened: (_) => _loadLetters(),
-        ),
+        builder:
+            (_) => EnvelopePreviewPage(
+              letter: letter,
+              recipient:
+                  letter.recipientLabel.isEmpty
+                      ? _partnerName
+                      : letter.recipientLabel,
+              onOpened: (_) => _loadLetters(),
+            ),
       ),
     );
-    if (!mounted) return;
-    _loadLetters();
+    if (mounted) _loadLetters();
   }
 
   // ============ 跳转你的编辑器页面 ============
   Future<void> _navigateToEditor({Map<String, dynamic>? existingRecord}) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const SlowLetterEditorPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const SlowLetterEditorPage()),
     );
     if (mounted) _loadLetters();
   }
 
   // ============ 跳转你的开信页面 ============
   Future<void> _navigateToOpenLetter(Letter letter) async {
+    // 拦截在途信件
+    if (letter.stage == LetterStage.inTransit) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('信件还在路上，等一等吧~')));
+      return;
+    }
+
+    // 修复：按照你截图里的参数要求传参
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SlowLetterOpenPage(
-          letterNo: letter.code,
-          title: letter.title,
-          content: letter.content,
-          recipientLabel: _partnerName,
-        ),
+        builder:
+            (_) => SlowLetterOpenPage(
+              letterId: letter.id,
+              letterNo: letter.code,
+              recipientLabel:
+                  letter.recipientLabel.isEmpty
+                      ? _partnerName
+                      : letter.recipientLabel,
+            ),
       ),
     );
     if (mounted) _loadLetters();
@@ -146,10 +194,7 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            'assets/images/slow_message_bg.png',
-            fit: BoxFit.cover,
-          ),
+          Image.asset('assets/images/slow_message_bg.png', fit: BoxFit.cover),
           Container(color: Colors.white.withOpacity(0.06)),
           SafeArea(
             child: LayoutBuilder(
@@ -157,11 +202,13 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
                 return SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
                     child: Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: horizontalPadding),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -169,26 +216,53 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
                           _buildTopBar(),
                           const SizedBox(height: 14),
                           _buildIntroBar(),
+                          if (_loadError != null) ...[
+                            const SizedBox(height: 10),
+                            Material(
+                              color: const Color(0xFFFFFDF6),
+                              borderRadius: BorderRadius.circular(8),
+                              child: ListTile(
+                                dense: true,
+                                title: Text(_loadError!),
+                                trailing: IconButton(
+                                  tooltip: '重试',
+                                  onPressed: _loadLetters,
+                                  icon: const Icon(Icons.refresh),
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 14),
                           _buildGroupCard(
                             title: '$_partnerName 的信',
                             children: [
                               _buildListTile(
                                 title: '$_partnerName的在途信件',
-                                count: partnerInTransit.length,
-                                hint: partnerInTransit.isEmpty
-                                    ? '暂时没有在路上的信'
-                                    : '最近一封 ${_formatDate(partnerInTransit.first.deliverAt)} 送达',
-                                onTap: () => _openLetters(receivedOnly: true), // 👈 恢复队友的列表页
+                                count: _count(
+                                  'receivedInTransit',
+                                  partnerInTransit.length,
+                                ),
+                                hint:
+                                    partnerInTransit.isEmpty
+                                        ? '暂时没有在路上的信'
+                                        : '最近一封 ${_formatDate(partnerInTransit.first.deliverAt)} 送达',
+                                onTap:
+                                    () => _openLatestIncomingInTransit(
+                                      partnerInTransit,
+                                    ),
                               ),
                               _buildListDivider(),
                               _buildListTile(
                                 title: '$_partnerName的历史信件',
-                                count: partnerHistory.length,
-                                hint: partnerHistory.isEmpty
-                                    ? '还没有收到的信'
-                                    : '最近一封 ${_formatDate(partnerHistory.first.deliverAt)} 已到达',
-                                onTap: () => _openLetters(receivedOnly: true), // 👈 恢复队友的列表页
+                                count: _count(
+                                  'receivedArchive',
+                                  partnerHistory.length,
+                                ),
+                                hint:
+                                    partnerHistory.isEmpty
+                                        ? '还没有收到的信'
+                                        : '最近一封 ${_formatDate(partnerHistory.first.deliverAt)} 已到达',
+                                onTap: () => _openLetters(receivedOnly: true),
                               ),
                             ],
                           ),
@@ -200,20 +274,25 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
                             children: [
                               _buildListTile(
                                 title: '我的在途信件',
-                                count: myInTransit.length,
-                                hint: myInTransit.isEmpty
-                                    ? '还没有寄出的信'
-                                    : '还有 ${_remaining(myInTransit.first.deliverAt)} 到达',
-                                onTap: () => _openLetters(receivedOnly: false), // 👈 恢复队友的列表页
+                                count: _count(
+                                  'sentInTransit',
+                                  myInTransit.length,
+                                ),
+                                hint:
+                                    myInTransit.isEmpty
+                                        ? '还没有寄出的信'
+                                        : '还有 ${_remaining(myInTransit.first.deliverAt)} 到达',
+                                onTap: () => _openLetters(receivedOnly: false),
                               ),
                               _buildListDivider(),
                               _buildListTile(
                                 title: '我的历史信件',
-                                count: myHistory.length,
-                                hint: myHistory.isEmpty
-                                    ? '还没有寄出的信'
-                                    : '共 ${myHistory.length} 封已到达',
-                                onTap: () => _openLetters(receivedOnly: false), // 👈 恢复队友的列表页
+                                count: _count('sentArchive', myHistory.length),
+                                hint:
+                                    myHistory.isEmpty
+                                        ? '还没有寄出的信'
+                                        : '共 ${myHistory.length} 封已到达',
+                                onTap: () => _openLetters(receivedOnly: false),
                               ),
                             ],
                           ),
@@ -258,24 +337,21 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
             curve: Curves.elasticOut,
             scale: _backScale,
             child: Container(
-              width: 48,
-              height: 48,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.55),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.60)),
                 boxShadow: [
                   BoxShadow(
-                    color: _inkGreen.withOpacity(0.15),
+                    color: _inkGreen.withOpacity(0.12),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.arrow_back,
-                size: 22,
-                color: _titleGreen,
-              ),
+              child: const Icon(Icons.arrow_back, size: 20, color: _titleGreen),
             ),
           ),
         ),
@@ -397,7 +473,10 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
   Widget _buildListDivider() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(height: 1, color: Colors.white.withOpacity(0.45)),
+      child: Container(
+        height: 1,
+        color: const Color(0xFF7F9A5E).withOpacity(0.18),
+      ),
     );
   }
 
@@ -508,7 +587,6 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
     final isInTransit = stage == LetterStage.inTransit;
 
     return GestureDetector(
-      // ============ 点击大卡片，跳转你的开信页面 ============
       onTap: () => _onTapWithHaptic(() => _navigateToOpenLetter(latest)),
       child: Container(
         padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
@@ -535,9 +613,10 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
                         width: 18,
                         height: 18,
                         decoration: BoxDecoration(
-                          color: isDelivered
-                              ? const Color(0xFFBFD8CB)
-                              : const Color(0xFFC9D9E8),
+                          color:
+                              isDelivered
+                                  ? const Color(0xFFBFD8CB)
+                                  : const Color(0xFFC9D9E8),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -564,7 +643,7 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    latest.title,
+                    latest.title.isEmpty ? '一封慢信' : latest.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -578,8 +657,8 @@ class _SlowMessageHomePageState extends State<SlowMessageHomePage> {
                     isInTransit
                         ? '还有 ${_remaining(latest.deliverAt)}'
                         : stage == LetterStage.opened
-                            ? '已拆开过，再看看 →'
-                            : '拆开看看 →',
+                        ? '已拆开过，再看看 →'
+                        : '拆开看看 →',
                     style: const TextStyle(
                       color: Color(0xFFA8B5A2),
                       fontSize: 12.5,

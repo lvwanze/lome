@@ -5,6 +5,12 @@ const LETTERS = 'slow_letters';
 const ATTACHMENTS = 'slow_letter_attachments';
 const DAY = 86400000;
 const APPEARANCE = Object.freeze({ stampId: 'stamp_default_v1', paperId: 'paper_default_v1', sealId: 'seal_default_v1', envelopeId: 'envelope_default_v1' });
+const APPEARANCE_OPTIONS = Object.freeze({
+  stampId: new Set(['stamp_default_v1', 'stamp_sakura_v1', 'stamp_ginkgo_v1', 'stamp_sunrise_v1']),
+  paperId: new Set(['paper_default_v1', 'paper_rose_v1', 'paper_sky_v1', 'paper_mint_v1']),
+  sealId: new Set(['seal_default_v1', 'seal_sakura_v1', 'seal_ginkgo_v1', 'seal_sunrise_v1']),
+  envelopeId: new Set(['envelope_default_v1', 'envelope_rose_v1', 'envelope_sky_v1', 'envelope_mint_v1']),
+});
 const segmenter = new Intl.Segmenter('zh', { granularity: 'grapheme' });
 const graphemes = (value) => Array.from(segmenter.segment(value), (item) => item.segment);
 const countContent = (value) => graphemes(value).filter((value) => !/^\s+$/u.test(value)).length;
@@ -141,7 +147,7 @@ function createLetterService({ store, crypt, now = Date.now }) {
       if (typeof params.title !== 'string' || !params.title.trim() || graphemes(params.title.trim()).length > 60 || typeof params.content !== 'string' || Buffer.byteLength(params.content) > 65536 || countContent(params.content) < 200 || countContent(params.content) > 5000) fail(12004, '标题须为 1～60 字，正文须为 200～5000 个有效字符');
       if (params.recipientLabel !== undefined && (typeof params.recipientLabel !== 'string' || !params.recipientLabel.trim() || graphemes(params.recipientLabel.trim()).length > 20 || /[\p{Cc}\p{Zl}\p{Zp}]/u.test(params.recipientLabel))) fail(12010, '请填写 1～20 字的单行称呼');
       const appearance = params.appearance === undefined ? { ...APPEARANCE } : params.appearance;
-      if (!appearance || typeof appearance !== 'object' || Object.keys(appearance).length !== 4 || Object.entries(APPEARANCE).some(([key, value]) => appearance[key] !== value)) fail(12009, '样式参数无效');
+      if (!appearance || typeof appearance !== 'object' || Object.keys(appearance).length !== 4 || Object.keys(APPEARANCE).some((key) => !APPEARANCE_OPTIONS[key].has(appearance[key]))) fail(12009, '样式参数无效');
       const arriveTime = parseArrival(params.arriveAt);
       const letterId = `ltr_${hash(`${userId}:${params.clientRequestId.toLowerCase()}`).slice(0, 40)}`;
       const requestHash = hash(JSON.stringify([params.expectedPartnerId, params.title.trim(), params.content, params.recipientLabel === undefined ? null : params.recipientLabel.trim(), Object.entries(APPEARANCE).map(([key]) => appearance[key]), params.arriveAt, params.attachmentId || null, params.replyToLetterId || null]));
@@ -249,4 +255,4 @@ function createLetterService({ store, crypt, now = Date.now }) {
   };
 }
 
-module.exports = { createLetterService, LETTERS, ATTACHMENTS, APPEARANCE, countContent, imageInfo, parseArrival };
+module.exports = { createLetterService, LETTERS, ATTACHMENTS, APPEARANCE, APPEARANCE_OPTIONS, countContent, imageInfo, parseArrival };

@@ -5,18 +5,19 @@ import 'dart:typed_data';
 import 'package:characters/characters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/user_model.dart';
+import '../services/auth_service.dart';
+import '../services/slow_letter_api.dart';
 import '../utils/app_constants.dart';
 
 class SlowLetterEditorPage extends StatefulWidget {
   const SlowLetterEditorPage({super.key});
 
   @override
-  State<SlowLetterEditorPage> createState() =>
-      _SlowLetterEditorPageState();
+  State<SlowLetterEditorPage> createState() => _SlowLetterEditorPageState();
 }
 
 class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
@@ -24,16 +25,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
   // 1. 接口配置
   // ============================================================
 
-  static const String _baseUrl =
-      'https://love-app1-0g8yva6l11e713ef-1418513210.ap-shanghai.app.tcloudbase.com';
-
-  static const String _sendPath = '/api/v1/letters/send';
-
-  static const String _uploadPath =
-      '/api/v1/letters/attachment/upload';
-
-  static const FlutterSecureStorage _secureStorage =
-      FlutterSecureStorage();
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   static const int _maxImageBytes = 2 * 1024 * 1024;
 
@@ -59,14 +51,11 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
   // 3. 输入控制器
   // ============================================================
 
-  final TextEditingController _titleController =
-      TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
 
-  final TextEditingController _recipientController =
-      TextEditingController();
+  final TextEditingController _recipientController = TextEditingController();
 
-  final TextEditingController _contentController =
-      TextEditingController();
+  final TextEditingController _contentController = TextEditingController();
 
   // ============================================================
   // 4. 页面状态
@@ -84,6 +73,10 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
 
   String? _selectedImageMimeType;
 
+  String _boundRecipientLabel = '读取绑定对象中';
+
+  String? _pendingRequestId;
+
   String _selectedStamp = 'stamp_default_v1';
 
   String _selectedPaper = 'paper_default_v1';
@@ -100,16 +93,16 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
 
   bool _draftChanged = false;
 
-  int get _contentLength =>
-      _contentController.text.characters.length;
+  int get _contentLength => _contentController.text.characters.length;
 
   bool get _contentValid {
     final text = _contentController.text;
 
     // 统计非纯空白的 Unicode 字符簇。
-    final effectiveLength = text.characters
-        .where((character) => character.trim().isNotEmpty)
-        .length;
+    final effectiveLength =
+        text.characters
+            .where((character) => character.trim().isNotEmpty)
+            .length;
 
     // 同时限制正文 UTF-8 原始字节数。
     final byteLength = utf8.encode(text).length;
@@ -128,9 +121,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
         _recipientController.text.trim().isNotEmpty &&
         _recipientController.text.characters.length <= 20 &&
         _arriveAt != null &&
-        _arriveAt!.isAfter(
-          DateTime.now().add(const Duration(hours: 24)),
-        );
+        _arriveAt!.isAfter(DateTime.now().add(const Duration(hours: 24)));
   }
 
   // ============================================================
@@ -142,6 +133,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
     super.initState();
 
     _restoreDraft();
+    _loadBoundRecipient();
 
     _titleController.addListener(_onInputChanged);
     _recipientController.addListener(_onInputChanged);
@@ -162,7 +154,25 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
 
     setState(() {
       _draftChanged = true;
+      _pendingRequestId = null;
     });
+  }
+
+  Future<void> _loadBoundRecipient() async {
+    try {
+      final user = await AuthService().getUserInfo();
+      if (!mounted) return;
+      setState(() {
+        _boundRecipientLabel =
+            user.isBound &&
+                    user.partnerNickname != null &&
+                    user.partnerNickname!.isNotEmpty
+                ? user.partnerNickname!
+                : '尚未绑定';
+      });
+    } catch (_) {
+      if (mounted) setState(() => _boundRecipientLabel = '暂时无法读取');
+    }
   }
 
   // ============================================================
@@ -184,22 +194,19 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
 
         _titleController.text = data['title']?.toString() ?? '';
 
-        _recipientController.text =
-            data['recipientLabel']?.toString() ?? '';
+        _recipientController.text = data['recipientLabel']?.toString() ?? '';
 
         _contentController.text = data['content']?.toString() ?? '';
 
-        _selectedStamp =
-            data['stampId']?.toString() ?? 'stamp_default_v1';
+        _selectedStamp = data['stampId']?.toString() ?? 'stamp_default_v1';
 
-        _selectedPaper =
-            data['paperId']?.toString() ?? 'paper_default_v1';
+        _selectedPaper = data['paperId']?.toString() ?? 'paper_default_v1';
 
-        _selectedSeal =
-            data['sealId']?.toString() ?? 'seal_default_v1';
+        _selectedSeal = data['sealId']?.toString() ?? 'seal_default_v1';
 
         _selectedEnvelope =
             data['envelopeId']?.toString() ?? 'envelope_default_v1';
+        _pendingRequestId = data['pendingRequestId']?.toString();
 
         final arriveAtValue = data['arriveAt'];
 
@@ -231,13 +238,11 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
       'sealId': _selectedSeal,
       'envelopeId': _selectedEnvelope,
       'arriveAt': _arriveAt?.toIso8601String(),
+      'pendingRequestId': _pendingRequestId,
     };
 
     try {
-      await _secureStorage.write(
-        key: _draftKey,
-        value: jsonEncode(draft),
-      );
+      await _secureStorage.write(key: _draftKey, value: jsonEncode(draft));
 
       _draftChanged = false;
     } catch (_) {
@@ -292,8 +297,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
 
       if (fileName.endsWith('.png')) {
         mimeType = 'image/png';
-      } else if (fileName.endsWith('.jpg') ||
-          fileName.endsWith('.jpeg')) {
+      } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
         mimeType = 'image/jpeg';
       } else if (fileName.endsWith('.webp')) {
         mimeType = 'image/webp';
@@ -307,12 +311,10 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
         _imageName = file.name;
         _selectedImageMimeType = mimeType;
         _attachmentId = null;
+        _pendingRequestId = null;
       });
 
-      await _uploadImage(
-        bytes: bytes,
-        mimeType: mimeType,
-      );
+      await _uploadImage(bytes: bytes, mimeType: mimeType);
     } catch (_) {
       _showMessage('选择图片失败，请重试');
     }
@@ -327,55 +329,15 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
     required Uint8List bytes,
     required String mimeType,
   }) async {
-    final token = await _getToken();
-
-    if (token == null || token.isEmpty) {
-      _showMessage('登录状态已失效，请重新登录');
-      return;
-    }
-
     setState(() {
       _uploadingImage = true;
     });
 
     try {
-      final uri = Uri.parse('$_baseUrl$_uploadPath');
-
-      final request = http.Request('POST', uri);
-
-      request.headers.addAll({
-        'Authorization': 'Bearer $token',
-        'Content-Type': mimeType,
-        'Accept': 'application/json',
-      });
-
-      // 接口要求直接发送二进制图片，不进行 Base64 编码。
-      request.bodyBytes = bytes;
-
-      final streamedResponse = await request.send();
-
-      final response = await http.Response.fromStream(
-        streamedResponse,
+      final attachmentId = await SlowLetterApi.instance.uploadAttachment(
+        bytes: bytes,
+        mimeType: mimeType,
       );
-
-      final Map<String, dynamic> result =
-          jsonDecode(response.body) as Map<String, dynamic>;
-
-      if (response.statusCode < 200 ||
-          response.statusCode >= 300 ||
-          result['code'] != 0) {
-        throw Exception(
-          result['message']?.toString() ?? '图片上传失败',
-        );
-      }
-
-      final data = result['data'] as Map<String, dynamic>?;
-
-      final attachmentId = data?['attachmentId']?.toString();
-
-      if (attachmentId == null || attachmentId.isEmpty) {
-        throw Exception('服务器未返回附件编号');
-      }
 
       if (!mounted) return;
 
@@ -409,6 +371,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
       _imageName = null;
       _selectedImageMimeType = null;
       _attachmentId = null;
+      _pendingRequestId = null;
     });
   }
 
@@ -421,22 +384,15 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
 
     final now = DateTime.now();
 
-    final initialDate = _arriveAt ??
-        now.add(const Duration(days: 1, hours: 1));
+    final initialDate = _arriveAt ?? now.add(const Duration(days: 1, hours: 1));
 
     final firstDate = now.add(const Duration(days: 1));
 
-    final lastDate = DateTime(
-      now.year + 5,
-      now.month,
-      now.day,
-    );
+    final lastDate = DateTime(now.year + 5, now.month, now.day);
 
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: initialDate.isAfter(firstDate)
-          ? initialDate
-          : firstDate,
+      initialDate: initialDate.isAfter(firstDate) ? initialDate : firstDate,
       firstDate: firstDate,
       lastDate: lastDate,
       helpText: '选择预计送达日期',
@@ -461,9 +417,10 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
 
     final pickedTime = await showTimePicker(
       context: context,
-      initialTime: _arriveAt != null
-          ? TimeOfDay.fromDateTime(_arriveAt!)
-          : const TimeOfDay(hour: 9, minute: 0),
+      initialTime:
+          _arriveAt != null
+              ? TimeOfDay.fromDateTime(_arriveAt!)
+              : const TimeOfDay(hour: 9, minute: 0),
       helpText: '选择预计送达时间',
       cancelText: '取消',
       confirmText: '确定',
@@ -492,9 +449,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
       pickedTime.minute,
     );
 
-    if (selected.isBefore(
-      DateTime.now().add(const Duration(hours: 24)),
-    )) {
+    if (selected.isBefore(DateTime.now().add(const Duration(hours: 24)))) {
       _showMessage('送达时间至少需要在 24 小时之后');
       return;
     }
@@ -502,6 +457,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
     setState(() {
       _arriveAt = selected;
       _draftChanged = true;
+      _pendingRequestId = null;
     });
 
     await _saveDraft();
@@ -525,45 +481,228 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
   // 11. 外观选择
   // ============================================================
 
-  void _selectAppearance(String type) {
-    if (_sending) return;
-
-    setState(() {
-      switch (type) {
-        case 'stamp':
-          _selectedStamp = 'stamp_default_v1';
-          break;
-
-        case 'paper':
-          _selectedPaper = 'paper_default_v1';
-          break;
-
-        case 'seal':
-          _selectedSeal = 'seal_default_v1';
-          break;
-
-        case 'envelope':
-          _selectedEnvelope = 'envelope_default_v1';
-          break;
-      }
-
-      _draftChanged = true;
-    });
-  }
-
-  bool _isAppearanceSelected(String type) {
+  String _selectedAppearanceId(String type) {
     switch (type) {
       case 'stamp':
-        return _selectedStamp == 'stamp_default_v1';
+        return _selectedStamp;
       case 'paper':
-        return _selectedPaper == 'paper_default_v1';
+        return _selectedPaper;
       case 'seal':
-        return _selectedSeal == 'seal_default_v1';
-      case 'envelope':
-        return _selectedEnvelope == 'envelope_default_v1';
+        return _selectedSeal;
       default:
-        return false;
+        return _selectedEnvelope;
     }
+  }
+
+  List<_AppearanceOption> _appearanceOptions(String type) {
+    switch (type) {
+      case 'stamp':
+        return const [
+          _AppearanceOption('stamp_default_v1', '初春', Color(0xFFEABFC0)),
+          _AppearanceOption('stamp_sakura_v1', '山茶', Color(0xFFD98B91)),
+          _AppearanceOption('stamp_ginkgo_v1', '银杏', Color(0xFFD6B45D)),
+          _AppearanceOption('stamp_sunrise_v1', '晨光', Color(0xFFE6A27A)),
+        ];
+      case 'paper':
+        return const [
+          _AppearanceOption('paper_default_v1', '暖白', Color(0xFFF4EBDD)),
+          _AppearanceOption('paper_rose_v1', '玫瑰', Color(0xFFF0DADD)),
+          _AppearanceOption('paper_sky_v1', '晴空', Color(0xFFDCE9EE)),
+          _AppearanceOption('paper_mint_v1', '薄荷', Color(0xFFDCE9DE)),
+        ];
+      case 'seal':
+        return const [
+          _AppearanceOption('seal_default_v1', '初春', Color(0xFFEABFC0)),
+          _AppearanceOption('seal_sakura_v1', '山茶', Color(0xFFD98B91)),
+          _AppearanceOption('seal_ginkgo_v1', '银杏', Color(0xFFD6B45D)),
+          _AppearanceOption('seal_sunrise_v1', '晨光', Color(0xFFE6A27A)),
+        ];
+      default:
+        return const [
+          _AppearanceOption('envelope_default_v1', '雾白', Color(0xFFEAF0E9)),
+          _AppearanceOption('envelope_rose_v1', '玫瑰', Color(0xFFF0DADD)),
+          _AppearanceOption('envelope_sky_v1', '晴空', Color(0xFFDCE9EE)),
+          _AppearanceOption('envelope_mint_v1', '薄荷', Color(0xFFDCE9DE)),
+        ];
+    }
+  }
+
+  Future<void> _selectAppearance(_AppearanceItem item) async {
+    if (_sending) return;
+    final options = _appearanceOptions(item.type);
+    final selectedId = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              decoration: BoxDecoration(
+                color: _panelColor,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: _borderColor),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: _darkTextColor.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    '选择${item.title}',
+                    style: const TextStyle(
+                      color: _darkTextColor,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Flexible(
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      itemCount: options.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1.18,
+                          ),
+                      itemBuilder: (context, index) {
+                        final option = options[index];
+                        final selected =
+                            option.id == _selectedAppearanceId(item.type);
+                        return Material(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => Navigator.pop(sheetContext, option.id),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color:
+                                      selected ? _darkTextColor : _borderColor,
+                                  width: selected ? 2 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    width: 54,
+                                    height: 58,
+                                    child: _buildAppearancePreview(
+                                      item.imagePath,
+                                      item.icon,
+                                      option,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          option.label,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: _darkTextColor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 7),
+                                        Container(
+                                          width: 32,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: option.color,
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (selected)
+                                    const Icon(
+                                      Icons.check_circle,
+                                      size: 18,
+                                      color: _darkTextColor,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (selectedId == null || !mounted) return;
+    setState(() {
+      switch (item.type) {
+        case 'stamp':
+          _selectedStamp = selectedId;
+          break;
+        case 'paper':
+          _selectedPaper = selectedId;
+          break;
+        case 'seal':
+          _selectedSeal = selectedId;
+          break;
+        case 'envelope':
+          _selectedEnvelope = selectedId;
+          break;
+      }
+      _pendingRequestId = null;
+      _draftChanged = true;
+    });
+    await _saveDraft();
+  }
+
+  Widget _buildAppearancePreview(
+    String imagePath,
+    IconData icon,
+    _AppearanceOption option,
+  ) {
+    return ColorFiltered(
+      colorFilter: ColorFilter.mode(
+        option.color.withValues(alpha: 0.42),
+        BlendMode.srcATop,
+      ),
+      child: Image.asset(
+        imagePath,
+        fit: BoxFit.contain,
+        errorBuilder:
+            (context, error, stackTrace) =>
+                Icon(icon, size: 36, color: option.color),
+      ),
+    );
   }
 
   // ============================================================
@@ -573,23 +712,38 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
   String _generateUuid() {
     final random = Random.secure();
 
-    final bytes = List<int>.generate(
-      16,
-      (_) => random.nextInt(256),
-    );
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
 
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
 
-    final hex = bytes
-        .map((value) => value.toRadixString(16).padLeft(2, '0'))
-        .join();
+    final hex =
+        bytes.map((value) => value.toRadixString(16).padLeft(2, '0')).join();
 
     return '${hex.substring(0, 8)}-'
         '${hex.substring(8, 12)}-'
         '${hex.substring(12, 16)}-'
         '${hex.substring(16, 20)}-'
         '${hex.substring(20, 32)}';
+  }
+
+  String _formatArrivalTime(DateTime value) {
+    final offset = value.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final absoluteOffset = offset.abs();
+    final date =
+        '${value.year.toString().padLeft(4, '0')}-'
+        '${value.month.toString().padLeft(2, '0')}-'
+        '${value.day.toString().padLeft(2, '0')}';
+    final time =
+        '${value.hour.toString().padLeft(2, '0')}:'
+        '${value.minute.toString().padLeft(2, '0')}:'
+        '${value.second.toString().padLeft(2, '0')}.'
+        '${value.millisecond.toString().padLeft(3, '0')}';
+    final zone =
+        '$sign${absoluteOffset.inHours.toString().padLeft(2, '0')}:'
+        '${(absoluteOffset.inMinutes % 60).toString().padLeft(2, '0')}';
+    return '${date}T$time$zone';
   }
 
   // ============================================================
@@ -603,9 +757,10 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
 
     final content = _contentController.text;
 
-    final effectiveLength = content.characters
-        .where((character) => character.trim().isNotEmpty)
-        .length;
+    final effectiveLength =
+        content.characters
+            .where((character) => character.trim().isNotEmpty)
+            .length;
 
     if (title.isEmpty) {
       return '请给这封信起个名字';
@@ -635,9 +790,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
       return '请选择预计送达时间';
     }
 
-    if (!_arriveAt!.isAfter(
-      DateTime.now().add(const Duration(hours: 24)),
-    )) {
+    if (!_arriveAt!.isAfter(DateTime.now().add(const Duration(hours: 24)))) {
       return '送达时间至少需要在 24 小时之后，请重新选择';
     }
 
@@ -682,11 +835,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
           content: const Text(
             '寄出后将无法修改、撤回或删除。\n\n'
             '请确认信件内容和预计送达时间。',
-            style: TextStyle(
-              color: _textColor,
-              fontSize: 15,
-              height: 1.8,
-            ),
+            style: TextStyle(color: _textColor, fontSize: 15, height: 1.8),
           ),
           actions: [
             TextButton(
@@ -730,16 +879,33 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
       return;
     }
 
+    late final User user;
+    try {
+      user = await AuthService().getUserInfo();
+    } catch (_) {
+      _showMessage('无法确认绑定对象，请检查网络后重试');
+      return;
+    }
+    final expectedPartnerId = user.partnerId;
+    if (!user.isBound ||
+        expectedPartnerId == null ||
+        expectedPartnerId.isEmpty) {
+      _showMessage('请先完成绑定，再寄出慢信');
+      return;
+    }
+
     setState(() {
       _sending = true;
     });
 
     try {
+      _pendingRequestId ??= _generateUuid();
       // 先保存当前草稿。
       await _saveDraft();
 
       final body = <String, dynamic>{
-        'clientRequestId': _generateUuid(),
+        'clientRequestId': _pendingRequestId,
+        'expectedPartnerId': expectedPartnerId,
         'title': _titleController.text.trim(),
         'content': _contentController.text,
         'recipientLabel': _recipientController.text.trim(),
@@ -750,39 +916,14 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
           'envelopeId': _selectedEnvelope,
         },
         // 保留时区偏移，避免只传无时区的本地时间。
-        'arriveAt': _arriveAt!.toIso8601String(),
+        'arriveAt': _formatArrivalTime(_arriveAt!),
       };
 
       if (_attachmentId != null) {
         body['attachmentId'] = _attachmentId;
       }
 
-      final response = await http.post(
-        Uri.parse('$_baseUrl$_sendPath'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json; charset=utf-8',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode(body),
-      );
-
-      final Map<String, dynamic> result =
-          jsonDecode(response.body) as Map<String, dynamic>;
-
-      if (response.statusCode < 200 ||
-          response.statusCode >= 300 ||
-          result['code'] != 0) {
-        throw Exception(
-          result['message']?.toString() ?? '信件寄出失败',
-        );
-      }
-
-      final data = result['data'] as Map<String, dynamic>?;
-
-      if (data == null) {
-        throw Exception('服务器没有返回信件信息');
-      }
+      final data = await SlowLetterApi.instance.send(body);
 
       final letterId = data['letterId']?.toString();
 
@@ -793,6 +934,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
       }
 
       // 发送成功后清除本地草稿。
+      _pendingRequestId = null;
       await _deleteDraft();
 
       if (!mounted) return;
@@ -826,19 +968,13 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
                 const SizedBox(height: 12),
                 Text(
                   _formatLetterNo(letterNo),
-                  style: const TextStyle(
-                    color: _textColor,
-                    fontSize: 19,
-                  ),
+                  style: const TextStyle(color: _textColor, fontSize: 19),
                 ),
                 const SizedBox(height: 12),
                 const Text(
                   '愿这份心意，在约定的时间抵达。',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _textColor,
-                    height: 1.7,
-                  ),
+                  style: TextStyle(color: _textColor, height: 1.7),
                 ),
               ],
             ),
@@ -862,7 +998,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
       }
     } catch (e) {
       if (mounted) {
-        _showMessage('寄出失败，请检查网络后重试');
+        _showMessage('寄出失败：$e');
       }
     } finally {
       if (mounted) {
@@ -935,18 +1071,14 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
               'assets/images/image 9.png',
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                return const ColoredBox(
-                  color: _backgroundColor,
-                );
+                return const ColoredBox(color: _backgroundColor);
               },
             ),
           ),
 
           // 背景浅色遮罩，让主面板更突出。
           Positioned.fill(
-            child: ColoredBox(
-              color: Colors.white.withValues(alpha: 0.08),
-            ),
+            child: ColoredBox(color: Colors.white.withValues(alpha: 0.08)),
           ),
 
           SafeArea(
@@ -966,9 +1098,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
                     ),
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: 720,
-                        ),
+                        constraints: const BoxConstraints(maxWidth: 720),
                         child: _buildMainPanel(),
                       ),
                     ),
@@ -984,9 +1114,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
               child: ColoredBox(
                 color: Colors.white.withValues(alpha: 0.45),
                 child: const Center(
-                  child: CircularProgressIndicator(
-                    color: _darkTextColor,
-                  ),
+                  child: CircularProgressIndicator(color: _darkTextColor),
                 ),
               ),
             ),
@@ -1005,12 +1133,12 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
       child: Row(
         children: [
           Material(
-            color: Colors.white.withValues(alpha: 0.42),
-            elevation: 2,
-            shadowColor: Colors.black12,
-            borderRadius: BorderRadius.circular(40),
+            color: Colors.white.withValues(alpha: 0.55),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
             child: InkWell(
-              borderRadius: BorderRadius.circular(40),
+              borderRadius: BorderRadius.circular(16),
               onTap: () async {
                 if (_draftChanged) {
                   await _saveDraft();
@@ -1021,12 +1149,12 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
                 }
               },
               child: const SizedBox(
-                width: 112,
-                height: 78,
+                width: 44,
+                height: 44,
                 child: Icon(
-                  Icons.arrow_back_rounded,
-                  size: 52,
-                  color: Colors.white,
+                  Icons.arrow_back,
+                  size: 20,
+                  color: Color(0xFF8FA57F),
                 ),
               ),
             ),
@@ -1116,10 +1244,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
             Positioned.fill(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(34),
-                child: Image.memory(
-                  _imageBytes!,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.memory(_imageBytes!, fit: BoxFit.cover),
               ),
             )
           else
@@ -1140,10 +1265,7 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
                 shape: const CircleBorder(),
                 child: IconButton(
                   onPressed: _removeImage,
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: _darkTextColor,
-                  ),
+                  icon: const Icon(Icons.close_rounded, color: _darkTextColor),
                   tooltip: '移除图片',
                 ),
               ),
@@ -1180,8 +1302,8 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
                             _uploadingImage
                                 ? '正在上传图片...'
                                 : _imageBytes == null
-                                    ? '更换图片（最多1张）'
-                                    : '重新选择图片',
+                                ? '更换图片（最多1张）'
+                                : '重新选择图片',
                             style: const TextStyle(
                               color: _textColor,
                               fontSize: 18,
@@ -1206,123 +1328,131 @@ class _SlowLetterEditorPageState extends State<SlowLetterEditorPage> {
   // ============================================================
 
   Widget _buildAppearanceSelector() {
-  final items = [
-    _AppearanceItem(
-      title: '邮票',
-      icon: Icons.local_post_office_outlined,
-      type: 'stamp',
-      imagePath: 'assets/images/1.png',
-    ),
-    _AppearanceItem(
-      title: '信纸',
-      icon: Icons.description_outlined,
-      type: 'paper',
-      imagePath: 'assets/images/2.png',
-    ),
-    _AppearanceItem(
-      title: '封口贴',
-      icon: Icons.label_outline_rounded,
-      type: 'seal',
-      imagePath: 'assets/images/3.png',
-    ),
-    _AppearanceItem(
-      title: '信封',
-      icon: Icons.mail_outline_rounded,
-      type: 'envelope',
-      imagePath: 'assets/images/4.png',
-    ),
-  ];
+    final items = <_AppearanceItem>[
+      _AppearanceItem(
+        title: '邮票',
+        icon: Icons.local_post_office_outlined,
+        type: 'stamp',
+        imagePath: 'assets/images/1.png',
+      ),
+      _AppearanceItem(
+        title: '信纸',
+        icon: Icons.description_outlined,
+        type: 'paper',
+        imagePath: 'assets/images/2.png',
+      ),
+      _AppearanceItem(
+        title: '封口贴',
+        icon: Icons.label_outline_rounded,
+        type: 'seal',
+        imagePath: 'assets/images/3.png',
+      ),
+      _AppearanceItem(
+        title: '信封',
+        icon: Icons.mail_outline_rounded,
+        type: 'envelope',
+        imagePath: 'assets/images/4.png',
+      ),
+    ];
 
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      const spacing = 12.0;
-      final itemWidth = (constraints.maxWidth - spacing * 3) / 4;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final itemWidth = (constraints.maxWidth - spacing) / 2;
 
-      return Row(
-        children: List.generate(items.length, (index) {
-          final item = items[index];
-          final selected = _isAppearanceSelected(item.type);
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children:
+              items
+                  .map(
+                    (item) => SizedBox(
+                      width: itemWidth,
+                      child: _buildAppearanceItem(item: item),
+                    ),
+                  )
+                  .toList(),
+        );
+      },
+    );
+  }
 
-          return Padding(
-            padding: EdgeInsets.only(
-              right: index == items.length - 1 ? 0 : spacing,
-            ),
-            child: SizedBox(
-              width: itemWidth,
-              child: _buildAppearanceItem(
-                item: item,
-                selected: selected,
-              ),
-            ),
-          );
-        }),
-      );
-    },
-  );
-}
-Widget _buildAppearanceItem({
-  required _AppearanceItem item,
-  required bool selected,
-}) {
-  return Material(
-    color: const Color(0xFFF8F1E8).withValues(alpha: 0.6),
-    elevation: 2,
-    shadowColor: Colors.black12,
-    borderRadius: BorderRadius.circular(30),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(30),
-      onTap: () => _selectAppearance(item.type),
-      child: Container(
-        height: 160,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 4,
-          vertical: 12,
-        ),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: selected
-                ? const Color(0xFFE4D4CD)
-                : Colors.transparent,
-            width: 1.5,
+  Widget _buildAppearanceItem({required _AppearanceItem item}) {
+    final options = _appearanceOptions(item.type);
+    final selected = options.firstWhere(
+      (option) => option.id == _selectedAppearanceId(item.type),
+      orElse: () => options.first,
+    );
+    return Material(
+      color: const Color(0xFFF8F1E8).withValues(alpha: 0.72),
+      elevation: 1,
+      shadowColor: Colors.black12,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _selectAppearance(item),
+        child: Container(
+          height: 104,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _borderColor),
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 48,
-              height: 58,
-              child: Image.asset(
-                item.imagePath,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    item.icon,
-                    size: 36,
-                    color: const Color(0xFFDCCFC3),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                item.title,
-                style: const TextStyle(
-                  color: _textColor,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w500,
+          child: Row(
+            children: [
+              SizedBox(
+                width: 58,
+                height: 70,
+                child: _buildAppearancePreview(
+                  item.imagePath,
+                  item.icon,
+                  selected,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        color: _darkTextColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      selected.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: _textColor, fontSize: 13),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: 34,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: selected.color,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.expand_more_rounded,
+                color: _darkTextColor,
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
   // ============================================================
   // 22. 标签
   // ============================================================
@@ -1350,16 +1480,10 @@ Widget _buildAppearanceItem({
         controller: _titleController,
         enabled: !_sending,
         maxLength: 50,
-        style: const TextStyle(
-          color: _darkTextColor,
-          fontSize: 19,
-        ),
+        style: const TextStyle(color: _darkTextColor, fontSize: 19),
         decoration: const InputDecoration(
           hintText: '给这封信起个名字',
-          hintStyle: TextStyle(
-            color: _textColor,
-            fontSize: 19,
-          ),
+          hintStyle: TextStyle(color: _textColor, fontSize: 19),
           border: InputBorder.none,
           counterText: '',
           contentPadding: EdgeInsets.symmetric(vertical: 25),
@@ -1373,41 +1497,51 @@ Widget _buildAppearanceItem({
   // ============================================================
 
   Widget _buildRecipientField() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '致',
-          style: TextStyle(
-            color: _textColor,
-            fontSize: 21,
-            fontWeight: FontWeight.w600,
-          ),
+        Text(
+          '实际收件人：$_boundRecipientLabel',
+          style: const TextStyle(color: _darkTextColor, fontSize: 14),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: TextField(
-            controller: _recipientController,
-            enabled: !_sending,
-            maxLength: 20,
-            style: const TextStyle(
-              color: _textColor,
-              fontSize: 21,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.5,
-            ),
-            decoration: const InputDecoration(
-              hintText: 'Name',
-              hintStyle: TextStyle(
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            const Text(
+              '致',
+              style: TextStyle(
                 color: _textColor,
                 fontSize: 21,
                 fontWeight: FontWeight.w600,
-                letterSpacing: 1.5,
               ),
-              border: InputBorder.none,
-              counterText: '',
-              isDense: true,
             ),
-          ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextField(
+                controller: _recipientController,
+                enabled: !_sending,
+                maxLength: 20,
+                style: const TextStyle(
+                  color: _textColor,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5,
+                ),
+                decoration: const InputDecoration(
+                  hintText: '自定义称呼',
+                  hintStyle: TextStyle(
+                    color: _textColor,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.5,
+                  ),
+                  border: InputBorder.none,
+                  counterText: '',
+                  isDense: true,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -1419,9 +1553,7 @@ Widget _buildAppearanceItem({
 
   Widget _buildContentField() {
     return Container(
-      constraints: const BoxConstraints(
-        minHeight: 430,
-      ),
+      constraints: const BoxConstraints(minHeight: 430),
       decoration: BoxDecoration(
         color: _cardColor,
         borderRadius: BorderRadius.circular(32),
@@ -1471,22 +1603,17 @@ Widget _buildAppearanceItem({
               children: [
                 Text(
                   '$_contentLength / 5000',
-                  style: const TextStyle(
-                    color: _textColor,
-                    fontSize: 16,
-                  ),
+                  style: const TextStyle(color: _textColor, fontSize: 16),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _contentValid
                       ? '正文长度符合要求'
                       : _contentLength < 200
-                          ? '正文200-5000字'
-                          : '正文不能超过5000字',
+                      ? '正文200-5000字'
+                      : '正文不能超过5000字',
                   style: TextStyle(
-                    color: _contentValid
-                        ? const Color(0xFF9BAF8E)
-                        : _textColor,
+                    color: _contentValid ? const Color(0xFF9BAF8E) : _textColor,
                     fontSize: 14,
                   ),
                 ),
@@ -1512,13 +1639,8 @@ Widget _buildAppearanceItem({
         onTap: _selectArriveTime,
         borderRadius: BorderRadius.circular(32),
         child: Container(
-          constraints: const BoxConstraints(
-            minHeight: 126,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 18,
-            vertical: 20,
-          ),
+          constraints: const BoxConstraints(minHeight: 126),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
           child: Row(
             children: [
               const Icon(
@@ -1534,10 +1656,7 @@ Widget _buildAppearanceItem({
                   children: [
                     const Text(
                       '预计送达时间',
-                      style: TextStyle(
-                        color: _textColor,
-                        fontSize: 18,
-                      ),
+                      style: TextStyle(color: _textColor, fontSize: 18),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -1576,42 +1695,41 @@ Widget _buildAppearanceItem({
       shadowColor: Colors.black12,
       borderRadius: BorderRadius.circular(50),
       child: InkWell(
-        onTap: _sending || _uploadingImage
-            ? null
-            : _confirmSend,
+        onTap: _sending || _uploadingImage ? null : _confirmSend,
         borderRadius: BorderRadius.circular(50),
         child: Container(
           height: 82,
           alignment: Alignment.center,
-          child: _sending
-              ? const SizedBox(
-                  width: 27,
-                  height: 27,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: _textColor,
-                  ),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.send_outlined,
-                      color: Color(0xFFF8F5F0),
-                      size: 34,
+          child:
+              _sending
+                  ? const SizedBox(
+                    width: 27,
+                    height: 27,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: _textColor,
                     ),
-                    const SizedBox(width: 20),
-                    Text(
-                      _uploadingImage ? '图片上传中' : '寄出',
-                      style: const TextStyle(
-                        color: _textColor,
-                        fontSize: 25,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 3,
+                  )
+                  : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.send_outlined,
+                        color: Color(0xFFF8F5F0),
+                        size: 34,
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 20),
+                      Text(
+                        _uploadingImage ? '图片上传中' : '寄出',
+                        style: const TextStyle(
+                          color: _textColor,
+                          fontSize: 25,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 3,
+                        ),
+                      ),
+                    ],
+                  ),
         ),
       ),
     );
@@ -1660,4 +1778,12 @@ class _AppearanceItem {
     required this.type,
     required this.imagePath,
   });
+}
+
+class _AppearanceOption {
+  final String id;
+  final String label;
+  final Color color;
+
+  const _AppearanceOption(this.id, this.label, this.color);
 }
