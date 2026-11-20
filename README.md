@@ -232,10 +232,8 @@ GitHub：[https://github.com/lvwanze/lome](https://github.com/lvwanze/lome)
 - **团队名称**：LOME
 - **参赛院校**：河南师范大学软件学院
 - **指导教师**：朱泰隆
-- **成员**：
+- **参赛者**：
   - 吕宛泽（队长、全栈开发）
-  - 李卓（前端开发）
-  - 范嘉博（设计 + 前端逻辑）
 
 ---
 
