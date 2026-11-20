@@ -1,405 +1,577 @@
+import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
+import '../services/slow_letter_api.dart';
+
 class SlowLetterOpenPage extends StatefulWidget {
+  final String letterId;
   final String letterNo;
-  final String title;
-  final String content;
   final String recipientLabel;
 
   const SlowLetterOpenPage({
     super.key,
+    required this.letterId,
     required this.letterNo,
-    required this.title,
-    required this.content,
-    required this.recipientLabel,
+    this.recipientLabel = '你',
   });
 
   @override
-  State<SlowLetterOpenPage> createState() =>
-      _SlowLetterOpenPageState();
+  State<SlowLetterOpenPage> createState() => _SlowLetterOpenPageState();
 }
 
 class _SlowLetterOpenPageState extends State<SlowLetterOpenPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  late Animation<double> _envelopeScale;
-  late Animation<double> _envelopeOpacity;
-  late Animation<double> _sealOpacity;
-  late Animation<double> _flapRotation;
-  late Animation<double> _paperOpacity;
-  late Animation<Offset> _paperSlide;
-  late Animation<double> _paperScale;
-
-  bool _isOpening = false;
-  bool _isOpened = false;
+    with TickerProviderStateMixin {
+  late final AnimationController _openingController;
+  late final AnimationController _paperController;
+  late final Animation<double> _sealAnimation;
+  late final Animation<double> _flapAnimation;
+  late final Animation<double> _paperAnimation;
+  bool _openingStarted = false;
+  bool _flapIsBehind = false;
+  bool _contentLoading = false;
+  bool _readInProgress = false;
+  bool _readCompleted = false;
+  String? _loadError;
+  String? _readError;
+  String? _attachmentError;
+  String _title = '';
+  String _content = '';
+  String? _viewToken;
+  Uint8List? _attachmentBytes;
 
   static const Color _textColor = Color(0xFF82766F);
 
   @override
   void initState() {
     super.initState();
-
-    _controller = AnimationController(
+    _openingController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2800),
+      duration: const Duration(milliseconds: 1600),
     );
-
-    _envelopeScale = Tween<double>(
-      begin: 0.92,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.25, curve: Curves.easeOut),
-      ),
+    _paperController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1700),
     );
-
-    _envelopeOpacity = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.76, 1.0, curve: Curves.easeOut),
-      ),
+    _sealAnimation = CurvedAnimation(
+      parent: _openingController,
+      curve: const Interval(0, 0.24, curve: Curves.easeInOut),
     );
-
-    _sealOpacity = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.16, 0.30, curve: Curves.easeIn),
-      ),
+    _flapAnimation = CurvedAnimation(
+      parent: _openingController,
+      curve: const Interval(0.16, 1, curve: Curves.easeInOutCubic),
     );
-
-    _flapRotation = Tween<double>(
-      begin: 3.1416,
-      end: 0.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.29, 0.58, curve: Curves.easeInOutCubic),
-      ),
+    _flapAnimation.addListener(_updateFlapLayer);
+    _paperAnimation = CurvedAnimation(
+      parent: _paperController,
+      curve: Curves.easeInOutCubic,
     );
-
-    _paperOpacity = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.32, 0.68, curve: Curves.easeIn),
-      ),
-    );
-
-    _paperSlide = Tween<Offset>(
-      begin: const Offset(0, 0.55),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.48, 0.90, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _paperScale = Tween<double>(
-      begin: 0.86,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.48, 0.90, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        setState(() {
-          _isOpened = true;
-          _isOpening = false;
-        });
-      }
-    });
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  // 翻盖旋转到 90° 后，切换到信纸后方。
+  void _updateFlapLayer() {
+    final shouldBeBehind = _flapAnimation.value >= 0.5;
+    if (_flapIsBehind != shouldBeBehind && mounted) {
+      setState(() {
+        _flapIsBehind = shouldBeBehind;
+      });
+    }
   }
 
   // 开始开信
   Future<void> _openLetter() async {
-    if (_isOpening || _isOpened) return;
+    if (_contentLoading || _openingStarted) return;
 
     setState(() {
-      _isOpening = true;
+      _openingStarted = true;
+      _loadError = null;
+    });
+    try {
+      await _openingController.forward();
+    } on TickerCanceled {
+      return;
+    }
+    if (!mounted) return;
+    await _loadLetterContent();
+  }
+
+  Future<void> _loadLetterContent() async {
+    if (_contentLoading) return;
+    setState(() {
+      _contentLoading = true;
+      _loadError = null;
     });
 
-    await _controller.forward();
+    try {
+      final data = await SlowLetterApi.instance.content(widget.letterId);
+      final attachment = data['attachment'];
+      Uint8List? attachmentBytes;
+      String? attachmentError;
+      if (attachment is Map && attachment['attachmentId'] != null) {
+        try {
+          attachmentBytes = await SlowLetterApi.instance.attachment(
+            letterId: widget.letterId,
+            attachmentId: attachment['attachmentId'].toString(),
+          );
+        } catch (_) {
+          attachmentError = '图片暂时无法显示，信件正文仍可阅读';
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _title = data['title']?.toString() ?? '';
+        _content = data['content']?.toString() ?? '';
+        _viewToken = data['viewToken']?.toString();
+        _attachmentBytes = attachmentBytes;
+        _attachmentError = attachmentError;
+        _contentLoading = false;
+      });
+      await _acknowledgeRead();
+      if (mounted) await _paperController.forward();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _contentLoading = false;
+        _loadError = error.toString();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _flapAnimation.removeListener(_updateFlapLayer);
+    _openingController.dispose();
+    _paperController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _acknowledgeRead() async {
+    var token = _viewToken;
+    if (token == null || token.isEmpty || _readInProgress || _readCompleted) {
+      return;
+    }
+    final shouldRefreshToken = _readError != null;
+    setState(() {
+      _readInProgress = true;
+      _readError = null;
+    });
+    try {
+      if (shouldRefreshToken) {
+        final refreshed = await SlowLetterApi.instance.content(widget.letterId);
+        token = refreshed['viewToken']?.toString() ?? '';
+        if (token.isEmpty) {
+          if (mounted) {
+            setState(() {
+              _readCompleted = true;
+              _viewToken = null;
+            });
+          }
+          return;
+        }
+        _viewToken = token;
+      }
+      await SlowLetterApi.instance.acknowledgeRead(
+        letterId: widget.letterId,
+        viewToken: token,
+      );
+      if (!mounted) return;
+      setState(() {
+        _readCompleted = true;
+        _viewToken = null;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _readError = error.toString());
+    } finally {
+      if (mounted) setState(() => _readInProgress = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final errorMessage = _loadError ?? _readError;
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
-          final height = constraints.maxHeight;
           final envelopeWidth = width < 600 ? width : 560.0;
           final envelopeHeight = envelopeWidth * 0.57;
           final envelopeLeft = (width - envelopeWidth) / 2;
-          final paperWidth = envelopeWidth * 0.9;
-          final paperLeft = (width - paperWidth) / 2;
+          final stampHeight = envelopeHeight * 0.27;
+          final stampWidth = stampHeight * 0.84;
+          final maxPaperHeight =
+              math
+                  .max(
+                    140.0,
+                    constraints.maxHeight -
+                        envelopeHeight -
+                        MediaQuery.of(context).padding.top -
+                        72,
+                  )
+                  .toDouble();
+          final paperWidth =
+              math.min(envelopeWidth * 0.68, maxPaperHeight / 1.72).toDouble();
+          final paperHeight = paperWidth * 1.72;
+            final paperStartOffset = paperHeight * 1.8;
 
-          return AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  // 1. 页面背景
-                  Image.asset(
-                    'assets/images/letter_bg.png',
-                    fit: BoxFit.cover,
-                  ),
-
-                  // 2. 信封后层底片
-                  Positioned(
-                    left: envelopeLeft,
-                    width: envelopeWidth,
-                    bottom: 0,
-                    height: envelopeHeight,
-                    child: Transform.scale(
-                      scale: _envelopeScale.value,
-                      child: Opacity(
-                        opacity: _envelopeOpacity.value,
-                        child: Image.asset(
-                          'assets/images/纯色信封后层底形 · 下半部分.png',
-                          fit: BoxFit.fill,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // 3. 翻盖绕底边从倒置翻至正向
-                  Positioned(
-                    left: envelopeLeft,
-                    width: envelopeWidth,
-                    bottom: envelopeHeight * 0.18,
-                    height: envelopeHeight,
-                    child: Transform(
-                      alignment: const Alignment(0, 0.45),
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset('assets/images/letter_bg.png', fit: BoxFit.cover),
+              Positioned(
+                left: envelopeLeft,
+                width: envelopeWidth,
+                bottom: 0,
+                height: envelopeHeight,
+                child: Image.asset(
+                  'assets/images/纯色信封后层底形 · 下半部分.png',
+                  fit: BoxFit.fill,
+                ),
+              ),
+              // 翻盖打开到 90° 后，切换到信纸后方。
+              if (_flapIsBehind)
+                Positioned(
+                left: envelopeLeft - envelopeWidth * 0.04,
+                width: envelopeWidth * 1.08,
+                bottom: -envelopeHeight * 0.12,
+                height: envelopeHeight * 1.08,
+                child: AnimatedBuilder(
+                  animation: _flapAnimation,
+                  builder: (context, child) {
+                    return Transform(
+                      alignment: Alignment.topCenter,
                       transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.0015)
-                        ..rotateX(_flapRotation.value),
-                      child: Opacity(
-                        opacity: _envelopeOpacity.value,
-                        child: Image.asset(
-                          'assets/images/纯色信封后层底形 · 上半部分.png',
-                          fit: BoxFit.fill,
-                        ),
-                      ),
+                        ..setEntry(3, 2, 0.001)
+                        ..rotateX(-math.pi * _flapAnimation.value),
+                      child: child,
+                    );
+                  },
+                  child: Transform.rotate(
+                    angle: math.pi,
+                    child: Image.asset(
+                      'assets/images/纯色信封后层底形 · 上半部分.png',
+                      fit: BoxFit.fill,
                     ),
                   ),
+                ),
+              ),
 
-                  // 4. 信纸：翻盖打开后从信封内部向上展开
-                  if (_controller.value > 0)
-                    Positioned(
-                      left: paperLeft,
-                      width: paperWidth,
-                      top: height * 0.105,
-                      height: height * 0.79,
-                      child: FadeTransition(
-                        opacity: _paperOpacity,
-                        child: SlideTransition(
-                          position: _paperSlide,
-                          child: Transform.scale(
-                            scale: _paperScale.value,
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                // 信纸图片
-                                Image.asset(
-                                  'assets/images/信纸-纯白心事.png',
-                                  fit: BoxFit.fill,
-                                ),
 
-                                // 信件编号
-                                Positioned(
-                                  top: height * 0.015,
-                                  left: 0,
-                                  right: 0,
-                                  child: Text(
-                                    widget.letterNo,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 30,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w400,
-                                      letterSpacing: 2,
-                                    ),
-                                  ),
-                                ),
-
-                                // 信件标题
-                                Positioned(
-                                  top: height * 0.17,
-                                  left: paperWidth * 0.07,
-                                  right: paperWidth * 0.07,
-                                  child: Text(
-                                    widget.title,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      color: Color(0xFFC9B5B3),
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                                ),
-
-                                // 信件正文
-                                Positioned(
-                                  top: height * 0.235,
-                                  left: paperWidth * 0.075,
-                                  right: paperWidth * 0.075,
-                                  bottom: height * 0.105,
-                                  child: SingleChildScrollView(
-                                    child: Text(
-                                      widget.content,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        height: 1.9,
-                                        color: _textColor,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // 收件人称呼
-                                Positioned(
-                                  bottom: height * 0.025,
-                                  left: 0,
-                                  right: 0,
-                                  child: Center(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 10,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFEAF0E9)
-                                            .withValues(alpha: 0.75),
-                                        border: Border.all(
-                                          color: const Color(0xFFC8D2C9),
-                                          width: 1.5,
-                                        ),
-                                        borderRadius: BorderRadius.circular(9),
-                                      ),
-                                      child: Text(
-                                        'to (${widget.recipientLabel})',
-                                        style: const TextStyle(
-                                          fontSize: 17,
-                                          color: Color(0xFF929B94),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+              // 第二阶段：翻盖打开后，信纸才开始向上抽出。
+              AnimatedBuilder(
+                animation: _paperAnimation,
+                builder: (context, child) {
+                  return Positioned(
+                    left: envelopeLeft + (envelopeWidth - paperWidth) / 2,
+                    top: 0,
+                    bottom: envelopeHeight,
+                    width: paperWidth,
+                    child: ClipRect(
+                      child: OverflowBox(
+                        alignment: Alignment.bottomCenter,
+                        minWidth: paperWidth,
+                        maxWidth: paperWidth,
+                        minHeight: paperHeight,
+                        maxHeight: paperHeight,
+                        child: Transform.translate(
+                          offset: Offset(
+                            0,
+                            paperStartOffset * (1 - _paperAnimation.value),
                           ),
+                          child: child,
                         ),
                       ),
                     ),
-
-                  // 5. 信封前片
-                  Positioned(
-                    left: envelopeLeft,
-                    width: envelopeWidth,
-                    bottom: 0,
-                    height: envelopeHeight,
-                    child: Transform.scale(
-                      scale: _envelopeScale.value,
-                      child: Opacity(
-                        opacity: _envelopeOpacity.value,
-                        child: Image.asset(
-                          'assets/images/纯色信封底形.png',
-                          fit: BoxFit.fill,
+                  );
+                },
+                child: SizedBox(
+                  width: paperWidth,
+                  height: paperHeight,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        'assets/images/信纸-纯白心事.png',
+                        fit: BoxFit.fill,
+                      ),
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          paperWidth * 0.10,
+                          paperHeight * 0.09,
+                          paperWidth * 0.10,
+                          paperHeight * 0.07,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _title.isEmpty ? '来信' : _title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: _textColor,
+                                fontSize:
+                                    (paperWidth * 0.052)
+                                        .clamp(15.0, 20.0)
+                                        .toDouble(),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Divider(height: 18, color: Color(0xFFD8D3C9)),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _content,
+                                      style: TextStyle(
+                                        color: _textColor,
+                                        height: 1.7,
+                                        fontSize:
+                                            (paperWidth * 0.040)
+                                                .clamp(13.0, 16.0)
+                                                .toDouble(),
+                                      ),
+                                    ),
+                                    if (_attachmentBytes != null) ...[
+                                      const SizedBox(height: 14),
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Image.memory(
+                                          _attachmentBytes!,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                    ],
+                                    if (_attachmentError != null) ...[
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        _attachmentError!,
+                                        style: const TextStyle(
+                                          color: Color(0xFF9A6F5C),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+
+
+              // 信封底形始终位于信纸前方，遮挡信纸下端。
+              Positioned(
+                left: envelopeLeft,
+                width: envelopeWidth,
+                bottom: 0,
+                height: envelopeHeight,
+                child: Image.asset(
+                  'assets/images/纯色信封底形.png',
+                  fit: BoxFit.fill,
+                ),
+              ),
+
+
+              // 初始状态及翻盖翻转前半段：翻盖位于信纸前方。
+              if (!_flapIsBehind)
+                Positioned(
+                left: envelopeLeft - envelopeWidth * 0.04,
+                width: envelopeWidth * 1.08,
+                bottom: -envelopeHeight * 0.08,
+                height: envelopeHeight * 1.08,
+                child: AnimatedBuilder(
+                  animation: _flapAnimation,
+                  builder: (context, child) {
+                    return Transform(
+                      alignment: Alignment.topCenter,
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.001)
+                        ..rotateX(-math.pi * _flapAnimation.value),
+                      child: child,
+                    );
+                  },
+                  child: Transform.rotate(
+                    angle: math.pi,
+                    child: Image.asset(
+                      'assets/images/纯色信封后层底形 · 上半部分.png',
+                      fit: BoxFit.fill,
                     ),
                   ),
-
-                  // 6. 封口贴
-                  if (!_isOpened)
+                ),
+              ),
+              Positioned(
+                left: envelopeLeft,
+                width: envelopeWidth,
+                bottom: 0,
+                height: envelopeHeight,
+                child: Stack(
+                  children: [
                     Positioned(
-                      left: width / 2 - envelopeWidth * 0.11,
+                      left: (envelopeWidth - envelopeWidth * 0.22) / 2,
                       width: envelopeWidth * 0.22,
-                      bottom: envelopeHeight * 0.47,
-                      height: height * 0.10,
-                      child: Opacity(
-                        opacity: _sealOpacity.value,
+                      bottom: envelopeHeight * 0.12,
+                      height: envelopeHeight * 0.18,
+                      child: AnimatedBuilder(
+                        animation: _sealAnimation,
+                        builder: (context, child) {
+                          return Opacity(
+                            opacity: 1 - _sealAnimation.value,
+                            child: Transform.translate(
+                              offset: Offset(
+                                0,
+                                envelopeHeight * 0.28 * _sealAnimation.value,
+                              ),
+                              child: Transform.rotate(
+                                angle: 0.55 * _sealAnimation.value,
+                                child: child,
+                              ),
+                            ),
+                          );
+                        },
                         child: GestureDetector(
                           onTap: _openLetter,
-                          child: Image.asset(
-                            'assets/images/封口贴图案.png',
-                            fit: BoxFit.contain,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/封口贴图案.png',
+                                fit: BoxFit.contain,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    'to (${widget.recipientLabel.trim().isEmpty ? '你' : widget.recipientLabel.trim()})',
+                                    maxLines: 1,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFF82766F),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-
-                  // 7. 点击提示
-                  if (!_isOpening && !_isOpened)
                     Positioned(
-                      bottom: envelopeHeight * 0.12,
-                      left: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: _openLetter,
-                        child: const Text(
-                          '轻触信封，开启这封来信',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Color(0xFF66816B),
-                            fontSize: 15,
-                            letterSpacing: 2,
-                          ),
+                      top: envelopeHeight * 0.02,
+                      right: envelopeWidth * 0.08,
+                      width: stampWidth,
+                      height: stampHeight,
+                      child: AnimatedBuilder(
+                        animation: _sealAnimation,
+                        builder: (context, child) {
+                          return Opacity(
+                            opacity: 1 - _sealAnimation.value,
+                            child: Transform.translate(
+                              offset: Offset(
+                                0,
+                                envelopeHeight *
+                                    0.28 *
+                                    _sealAnimation.value,
+                              ),
+                              child: Transform.rotate(
+                                angle: 0.55 * _sealAnimation.value,
+                                child: child,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Image.asset(
+                          'assets/images/邮票v1.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
-
-                  // 8. 返回按钮
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + 18,
-                    left: 20,
-                    child: GestureDetector(
-                      onTap: () => Navigator.maybePop(context),
-                      child: Container(
-                        width: 62,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(30),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 18,
+                left: 20,
+                child: GestureDetector(
+                  onTap: () => Navigator.maybePop(context),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.60),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(
+                            0xFF7F9A5E,
+                          ).withValues(alpha: 0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
-                        child: const Icon(
-                          Icons.arrow_back_rounded,
-                          color: Colors.white,
-                          size: 30,
-                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFF8FA57F),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              if (_contentLoading || _readInProgress)
+                const Center(
+                  child: CircularProgressIndicator(color: _textColor),
+                ),
+              if (errorMessage != null)
+                Positioned(
+                  left: 24,
+                  right: 24,
+                  top: MediaQuery.of(context).padding.top + 82,
+                  child: Material(
+                    color: const Color(0xFFFFFDF6),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            errorMessage,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: _textColor),
+                          ),
+                          TextButton.icon(
+                            onPressed:
+                                _contentLoading || _readInProgress
+                                    ? null
+                                    : _loadError != null
+                                    ? _loadLetterContent
+                                    : _acknowledgeRead,
+                            icon: const Icon(Icons.refresh),
+                            label: Text(
+                              _loadError != null ? '重试获取信件' : '重试确认已读',
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              );
-            },
+                ),
+            ],
           );
         },
       ),

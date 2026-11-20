@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lome/services/auth_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/bind_success_page.dart';
@@ -22,6 +23,7 @@ class LomeApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.pink,
         useMaterial3: true,
+        textTheme: GoogleFonts.caveatTextTheme(),
       ),
       initialRoute: '/splash',
       routes: {

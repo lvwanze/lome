@@ -3,8 +3,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lome/pages/my_letters_page.dart';
+import 'package:lome/pages/slow_letter_open_page.dart';
 import 'package:lome/services/letter_store.dart';
 import 'package:lome/widgets/envelope_template.dart';
 
@@ -31,6 +31,8 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
   static const Color _noteYellow = Color(0xFFF8F0D3);
 
   late Letter _letter;
+  List<Letter> _inTransitLetters = const [];
+  int _inTransitIndex = -1;
   Timer? _ticker;
   double _envelopeScale = 1.0;
 
@@ -38,6 +40,7 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
   void initState() {
     super.initState();
     _letter = widget.letter;
+    _loadInTransitLetters();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -55,6 +58,40 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
       HapticFeedback.lightImpact();
     }
     action();
+  }
+
+  Future<void> _loadInTransitLetters() async {
+    try {
+      final letters = await LetterStore.load();
+      if (!mounted) return;
+      final inTransit = LetterStore.inTransitOf(
+        letters,
+        fromMe: _letter.fromMe,
+      );
+      if (_letter.stage == LetterStage.inTransit &&
+          !inTransit.any((letter) => letter.id == _letter.id)) {
+        inTransit.insert(0, _letter);
+      }
+      setState(() {
+        _inTransitLetters = inTransit;
+        _inTransitIndex = inTransit.indexWhere(
+          (letter) => letter.id == _letter.id,
+        );
+      });
+    } catch (_) {}
+  }
+
+  void _switchInTransitLetter(int target) {
+    if (target < 0 || target >= _inTransitLetters.length) return;
+    setState(() {
+      _inTransitIndex = target;
+      _letter = _inTransitLetters[target];
+    });
+  }
+
+  String get _currentRecipient {
+    final label = _letter.recipientLabel.trim();
+    return label.isEmpty ? widget.recipient : label;
   }
 
   String _formatDate(DateTime value) {
@@ -82,10 +119,7 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            'assets/images/cloud_bg.png',
-            fit: BoxFit.cover,
-          ),
+          Image.asset('assets/images/cloud_bg.png', fit: BoxFit.cover),
           Container(color: Colors.white.withOpacity(0.10)),
           SafeArea(
             child: LayoutBuilder(
@@ -93,8 +127,9 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
                 return SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
@@ -110,6 +145,11 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
                           _buildEnvelope(),
                           const SizedBox(height: 30),
                           _buildStatusRow(),
+                          if (_inTransitLetters.length > 1 &&
+                              _inTransitIndex >= 0) ...[
+                            const SizedBox(height: 12),
+                            _buildTransitPager(),
+                          ],
                           const SizedBox(height: 10),
                           _buildDeliveryText(),
                           const SizedBox(height: 26),
@@ -147,11 +187,7 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.arrow_back,
-              size: 20,
-              color: _softText,
-            ),
+            child: const Icon(Icons.arrow_back, size: 20, color: _softText),
           ),
         ),
         Expanded(
@@ -218,9 +254,7 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
         ),
         const SizedBox(height: 7),
         Text(
-          inTransit
-              ? '信件已走过 ${(progress * 100).round()}% 的路程'
-              : '这封信已经走完全程',
+          inTransit ? '信件已走过 ${(progress * 100).round()}% 的路程' : '这封信已经走完全程',
           style: TextStyle(
             fontSize: 11.5,
             letterSpacing: 0.5,
@@ -266,34 +300,64 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
                     child: SizedBox(
                       width: 54,
                       height: 72,
-                      child: StampTemplate(
-                        child: _buildStampContent(stage),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset('assets/images/1.png', fit: BoxFit.fill),
+                          if (stage != LetterStage.inTransit &&
+                              _letter.images.isNotEmpty)
+                            Positioned.fill(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  11,
+                                  14,
+                                  11,
+                                  16,
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: Image.network(
+                                    _letter.images.first,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (_, __, ___) => const SizedBox.shrink(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
                   Align(
                     alignment: const Alignment(0, -0.20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE6F0E6),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: const Color(0xFFC0D0C0),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        'to（${widget.recipient}）',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.caveat(
-                          fontSize: 17,
-                          color: const Color(0xFF708070),
-                        ),
+                    child: SizedBox(
+                      width: 112,
+                      height: 44,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/封口贴图案.png',
+                            fit: BoxFit.contain,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'to (${_currentRecipient.trim().isEmpty ? '你' : _currentRecipient.trim()})',
+                                maxLines: 1,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF82766F),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -304,8 +368,8 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
                       stage == LetterStage.inTransit
                           ? '正在路上'
                           : stage == LetterStage.delivered
-                              ? '轻点拆开信封'
-                              : '已拆封',
+                          ? '轻点拆开信封'
+                          : '已拆封',
                       style: TextStyle(
                         fontSize: 10.5,
                         letterSpacing: 1,
@@ -322,37 +386,13 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
     );
   }
 
-  Widget _buildStampContent(LetterStage stage) {
-    final showImage = stage != LetterStage.inTransit && _letter.images.isNotEmpty;
-    if (showImage) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(2),
-        child: Image.network(
-          _letter.images.first,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildStampIcon(),
-        ),
-      );
-    }
-    return _buildStampIcon();
-  }
-
-  Widget _buildStampIcon() {
-    return Center(
-      child: Icon(
-        Icons.photo_size_select_large_outlined,
-        size: 18,
-        color: _inkGreen.withOpacity(0.35),
-      ),
-    );
-  }
-
   Widget _buildStatusRow() {
     final stage = _letter.stage;
     final remaining = _letter.remaining;
-    final statusText = stage == LetterStage.inTransit
-        ? '${_letter.code}正在寄送中'
-        : stage == LetterStage.delivered
+    final statusText =
+        stage == LetterStage.inTransit
+            ? '${_letter.code}正在寄送中'
+            : stage == LetterStage.delivered
             ? '${_letter.code}已送达'
             : '${_letter.code}已拆封';
 
@@ -361,9 +401,10 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
         width: 18,
         height: 18,
         decoration: BoxDecoration(
-          color: stage == LetterStage.inTransit
-              ? const Color(0xFFD3C2B8)
-              : const Color(0xFFBFD8CB),
+          color:
+              stage == LetterStage.inTransit
+                  ? const Color(0xFFD3C2B8)
+                  : const Color(0xFFBFD8CB),
           shape: BoxShape.circle,
         ),
         child: Icon(
@@ -375,10 +416,7 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
       const SizedBox(width: 8),
       Text(
         statusText,
-        style: TextStyle(
-          color: _softText.withOpacity(0.95),
-          fontSize: 13.5,
-        ),
+        style: TextStyle(color: _softText.withOpacity(0.95), fontSize: 13.5),
       ),
       const SizedBox(width: 18),
     ];
@@ -404,10 +442,7 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
       children.add(
         Text(
           stage == LetterStage.delivered ? '轻点信封即可拆开' : '已经收进回忆里',
-          style: TextStyle(
-            color: _softText.withOpacity(0.8),
-            fontSize: 12,
-          ),
+          style: TextStyle(color: _softText.withOpacity(0.8), fontSize: 12),
         ),
       );
     }
@@ -428,6 +463,64 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
         color: Color(0xFFE8A0A0),
         fontSize: 19,
         fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  Widget _buildTransitPager() {
+    final total = _inTransitLetters.length;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildTransitArrow(
+          Icons.chevron_left,
+          _inTransitIndex > 0
+              ? () => _switchInTransitLetter(_inTransitIndex - 1)
+              : null,
+          '上一封在途信件',
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Text(
+            '在途信件 ${_inTransitIndex + 1} / $total',
+            style: TextStyle(
+              fontSize: 12,
+              color: _softText.withOpacity(0.9),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        _buildTransitArrow(
+          Icons.chevron_right,
+          _inTransitIndex < total - 1
+              ? () => _switchInTransitLetter(_inTransitIndex + 1)
+              : null,
+          '下一封在途信件',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTransitArrow(
+    IconData icon,
+    VoidCallback? onPressed,
+    String tooltip,
+  ) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed == null ? null : () => _onTapWithHaptic(onPressed),
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.white.withOpacity(0.5),
+          foregroundColor: _softText,
+          disabledForegroundColor: _softText.withOpacity(0.35),
+          side: BorderSide(color: Colors.white.withOpacity(0.7)),
+          shape: const CircleBorder(),
+          padding: EdgeInsets.zero,
+        ),
+        icon: Icon(icon, size: 22),
       ),
     );
   }
@@ -459,10 +552,7 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildRoundButton(
-          Icons.mail_outline,
-          () => _openLetterList(),
-        ),
+        _buildRoundButton(Icons.mail_outline, () => _openLetterList()),
         GestureDetector(
           onTap: () => _onTapWithHaptic(_handleEnvelopeTap),
           child: Container(
@@ -490,10 +580,7 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
             ),
           ),
         ),
-        _buildRoundButton(
-          Icons.schedule,
-          () => _showSnapshot(),
-        ),
+        _buildRoundButton(Icons.schedule, () => _showSnapshot()),
       ],
     );
   }
@@ -509,11 +596,7 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white.withOpacity(0.7)),
         ),
-        child: Icon(
-          icon,
-          color: _softText.withOpacity(0.9),
-          size: 20,
-        ),
+        child: Icon(icon, color: _softText.withOpacity(0.9), size: 20),
       ),
     );
   }
@@ -534,18 +617,19 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
       );
       return;
     }
-    if (stage == LetterStage.delivered) {
-      final updated = await LetterStore.markOpened(_letter.id);
-      if (!mounted) return;
-      final opened = updated.firstWhere(
-        (e) => e.id == _letter.id,
-        orElse: () => _letter.copyWith(openedAt: DateTime.now()),
-      );
-      setState(() => _letter = opened);
-      widget.onOpened?.call(opened);
-    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => SlowLetterOpenPage(
+              letterId: _letter.id,
+              letterNo: _letter.code,
+              recipientLabel: _currentRecipient,
+            ),
+      ),
+    );
     if (!mounted) return;
-    _showSnapshot();
+    widget.onOpened?.call(_letter);
   }
 
   void _showSnapshot() {
@@ -557,7 +641,7 @@ class _EnvelopePreviewPageState extends State<EnvelopePreviewPage> {
       builder: (_) {
         return _PreviewSnapshotSheet(
           letter: letter,
-          recipient: widget.recipient,
+          recipient: _currentRecipient,
           formatDateTime: _formatDateTime,
         );
       },
@@ -713,28 +797,31 @@ class _PreviewSnapshotSheet extends StatelessWidget {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: letter.images.map((url) {
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
-                              url,
-                              width: 96,
-                              height: 96,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                width: 96,
-                                height: 96,
-                                color: const Color(0xFFEDF1E3),
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  size: 22,
-                                  color: const Color(0xFF7F9A5E)
-                                      .withOpacity(0.5),
+                        children:
+                            letter.images.map((url) {
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.network(
+                                  url,
+                                  width: 96,
+                                  height: 96,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (_, __, ___) => Container(
+                                        width: 96,
+                                        height: 96,
+                                        color: const Color(0xFFEDF1E3),
+                                        child: Icon(
+                                          Icons.broken_image_outlined,
+                                          size: 22,
+                                          color: const Color(
+                                            0xFF7F9A5E,
+                                          ).withOpacity(0.5),
+                                        ),
+                                      ),
                                 ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                              );
+                            }).toList(),
                       ),
                     ],
                     const SizedBox(height: 18),

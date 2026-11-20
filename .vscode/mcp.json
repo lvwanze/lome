@@ -4,6 +4,18 @@
      "figma": {
        "url": "https://mcp.figma.com/mcp",
        "type": "http"
+      },
+      "cloudbase": {
+        "type": "stdio",
+        "command": "npx",
+        "args": [
+          "-y",
+          "@cloudbase/npm-launcher@1.3.0",
+          "@cloudbase/cloudbase-mcp@latest"
+        ],
+        "env": {
+          "TCB_SITE": "domestic"
+        }
      }
    }
 }
