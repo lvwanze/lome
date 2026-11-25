@@ -43,7 +43,21 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Environment files: never commit credentials; only the template is tracked
 .env
+.env.*
+*.env
+!.env.example
 
-# 后端本地测试依赖
-/cloudbase/node_modules/
+# Dependencies and build artifacts.
+# Previously only /cloudbase/node_modules/ was ignored, which missed the
+# per-function copies under cloudbase/functions/*/node_modules/.
+**/node_modules/
+/cloudbase/functions/*.zip
+
+# Local scratch exports
+/params.json
+/dev_log_full.txt
+/list.txt
+/structure.txt
+/tatus
