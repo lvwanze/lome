@@ -274,7 +274,7 @@ GitHub：[https://github.com/lvwanze/lome](https://github.com/lvwanze/lome)
 - **指导教师**：朱泰隆
 - **参赛者**：
   - 吕宛泽（队长、全栈开发）
-
+  团队成员（李卓、岳英昊、范嘉博、申金玄）
 ---
 
 ## 📄 声明
